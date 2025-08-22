@@ -1,20 +1,12 @@
-FROM openjdk:17-jdk-slim
-
-# Создаем директорию для приложения
+FROM gradle:jdk21-jammy AS build
 WORKDIR /app
+COPY build.gradle settings.gradle /app/
+COPY src /app/src
+RUN gradle clean build -x test
 
-# Копируем JAR файл
-COPY build/libs/BadRecommender-0.0.1-SNAPSHOT.jar app.jar
-
-# Копируем credentials файл для Google Sheets
-COPY google-credentials.json google-credentials.json
-
-# Открываем порт
+FROM openjdk:21-slim-buster
+WORKDIR /app
+COPY --from=build /app/build/libs/BadRecommender-0.0.1-SNAPSHOT.jar /app/app.jar
+COPY google-credentials.json /app/google-credentials.json
 EXPOSE 8080
-
-# Настраиваем переменные окружения
-ENV SPRING_PROFILES_ACTIVE=production
-ENV JAVA_OPTS="-Xmx512m -Xms256m"
-
-# Запускаем приложение
-ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
