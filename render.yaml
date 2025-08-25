@@ -14,14 +14,14 @@ services:
         value: 8080
       - key: GOOGLE_SHEETS_SPREADSHEET_ID
         value: 1xoz1hpg9XIcci4j9YByJiWQ2PYuiMb2cOX_Nu03rblM
-                           - key: MAIL_HOST
-          value: smtp.gmail.com
-                            - key: MAIL_PORT
-           value: 587
-       - key: MAIL_USERNAME
-         value: pain.maker28@gmail.com
-       - key: MAIL_PASSWORD
-         value: pgnj elrq oguq deyd
+      - key: MAIL_HOST
+        value: smtp.msndr.net
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: marketing@soloways.ru
+      - key: MAIL_PASSWORD
+        value: e016348c8debb844652c586076fb1c8f
       - key: CORS_ALLOWED_ORIGINS
         value: "*"  # В production замените на реальные домены
     disk:

@@ -11,10 +11,10 @@ spring:
   
   # Конфигурация email
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
+    host: ${MAIL_HOST:smtp.msndr.net}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:pain.maker28@gmail.com}
-    password: ${MAIL_PASSWORD:pgnj elrq oguq deyd}
+    username: ${MAIL_USERNAME:marketing@soloways.ru}
+    password: ${MAIL_PASSWORD:e016348c8debb844652c586076fb1c8f}
     properties:
       mail:
         smtp:
@@ -23,7 +23,7 @@ spring:
             enable: true
             required: true
           ssl:
-            trust: smtp.gmail.com
+            trust: smtp.msndr.net
             enable: false
           connectiontimeout: 30000
           timeout: 30000
