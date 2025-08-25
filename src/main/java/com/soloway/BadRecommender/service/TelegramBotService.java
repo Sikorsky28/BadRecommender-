@@ -47,6 +47,13 @@ public class TelegramBotService extends TelegramLongPollingBot {
         String text = update.getMessage().getText();
         TelegramUser user = getUserSession(chatId);
 
+        // Обработка команд
+        if (text.startsWith("/")) {
+            handleCommand(chatId, user, text);
+            return;
+        }
+
+        // Обработка текстовых сообщений
         switch (user.getState()) {
             case "START":
                 handleStart(chatId, user);
@@ -58,9 +65,41 @@ public class TelegramBotService extends TelegramLongPollingBot {
                 handleEmail(chatId, user, text);
                 break;
             default:
-                sendMessage(chatId, "Пожалуйста, используйте кнопки для навигации.");
+                sendMessage(chatId, "Пожалуйста, используйте кнопки для навигации или /start для начала.");
         }
     }
+
+    private void handleCommand(Long chatId, TelegramUser user, String command) {
+        switch (command.toLowerCase()) {
+            case "/start":
+                user.reset();
+                handleStart(chatId, user);
+                break;
+            case "/help":
+                sendHelpMessage(chatId);
+                break;
+            default:
+                sendMessage(chatId, "Неизвестная команда. Используйте /start для начала опроса или /help для помощи.");
+        }
+    }
+
+    private void sendHelpMessage(Long chatId) {
+        String helpText = "🤖 <b>SOLOWAYS - Помощь по использованию бота</b>\n\n" +
+                "Этот бот поможет вам получить персональные рекомендации БАДов.\n\n" +
+                "<b>Команды:</b>\n" +
+                "/start - Начать опрос для получения рекомендаций\n" +
+                "/help - Показать эту справку\n\n" +
+                "<b>Как это работает:</b>\n" +
+                "1. Введите ваше имя\n" +
+                "2. Выберите интересующую тему\n" +
+                "3. Ответьте на несколько вопросов\n" +
+                "4. Получите персональные рекомендации на email\n\n" +
+                "Нажмите /start чтобы начать!";
+        
+        sendMessage(chatId, helpText);
+    }
+
+
 
     private void handleCallbackQuery(Update update) {
         Long chatId = update.getCallbackQuery().getMessage().getChatId();
@@ -130,13 +169,16 @@ public class TelegramBotService extends TelegramLongPollingBot {
         }
 
         try {
+            // Конвертируем ответы в формат UserAnswer
+            List<com.soloway.BadRecommender.model.UserAnswer> userAnswers = convertToUserAnswers(user.getAnswers());
+            
             // Генерируем рекомендации
-            List<String> mainRecommendations = recommendationService.getMainRecommendations(user.getSelectedTopic(), user.getAnswers());
-            List<String> additionalRecommendations = recommendationService.getAdditionalRecommendations(user.getSelectedTopic(), user.getAnswers());
+            com.soloway.BadRecommender.service.RecommendationCalculationService.RecommendationResult result = 
+                recommendationService.calculateRecommendations(userAnswers, user.getSelectedTopic());
             
             // Отправляем email
             emailService.sendRecommendationsEmail(email, user.getUserName(), user.getSelectedTopic(), 
-                    convertToSupplements(mainRecommendations), convertToSupplements(additionalRecommendations));
+                    result.getMainRecommendations(), result.getAdditionalRecommendations());
             
             user.setState("COMPLETE");
             
@@ -239,19 +281,56 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private List<Map<String, Object>> getQuestionsForTopic(String topic) {
-        // Здесь должна быть логика получения вопросов из RecommendationCalculationService
-        // Пока возвращаем заглушку
-        return new ArrayList<>();
+        // Создаем вопросы для каждой темы
+        List<Map<String, Object>> questions = new ArrayList<>();
+        
+        switch (topic) {
+            case "energy":
+                questions.add(createQuestion("Часто ли вас клонит в сон после обеда?", 
+                    Arrays.asList("редко", "иногда", "почти каждый день")));
+                questions.add(createQuestion("Сколько чашек кофе вы выпиваете в день?", 
+                    Arrays.asList("0-1", "2-3", "4+")));
+                questions.add(createQuestion("Как вы чувствуете себя утром после пробуждения?", 
+                    Arrays.asList("бодро", "нормально", "тяжело встаю")));
+                break;
+            case "sleep":
+                questions.add(createQuestion("Как вы оцениваете качество своего сна?", 
+                    Arrays.asList("хорошее", "удовлетворительное", "плохое")));
+                questions.add(createQuestion("Как часто вы испытываете стресс?", 
+                    Arrays.asList("редко", "иногда", "постоянно")));
+                questions.add(createQuestion("Сколько времени вам нужно, чтобы заснуть?", 
+                    Arrays.asList("менее 15 минут", "15-30 минут", "более 30 минут")));
+                break;
+            default:
+                // Для остальных тем используем общие вопросы
+                questions.add(createQuestion("Как вы оцениваете свое общее самочувствие?", 
+                    Arrays.asList("отличное", "хорошее", "удовлетворительное")));
+                questions.add(createQuestion("Как часто вы занимаетесь спортом?", 
+                    Arrays.asList("регулярно", "иногда", "редко")));
+                questions.add(createQuestion("Как вы питаетесь?", 
+                    Arrays.asList("сбалансированно", "нерегулярно", "фастфуд")));
+        }
+        
+        return questions;
     }
 
-    private List<com.soloway.BadRecommender.model.Supplement> convertToSupplements(List<String> supplementNames) {
-        // Конвертируем названия в объекты Supplement
-        List<com.soloway.BadRecommender.model.Supplement> supplements = new ArrayList<>();
-        for (String name : supplementNames) {
-            com.soloway.BadRecommender.model.Supplement supplement = new com.soloway.BadRecommender.model.Supplement();
-            supplement.setName(name);
-            supplements.add(supplement);
+    private Map<String, Object> createQuestion(String text, List<String> options) {
+        Map<String, Object> question = new HashMap<>();
+        question.put("text", text);
+        question.put("options", options);
+        return question;
+    }
+
+    private List<com.soloway.BadRecommender.model.UserAnswer> convertToUserAnswers(Map<String, String> answers) {
+        List<com.soloway.BadRecommender.model.UserAnswer> userAnswers = new ArrayList<>();
+        
+        for (Map.Entry<String, String> entry : answers.entrySet()) {
+            com.soloway.BadRecommender.model.UserAnswer userAnswer = new com.soloway.BadRecommender.model.UserAnswer();
+            userAnswer.setQuestionId(entry.getKey());
+            userAnswer.setAnswer(entry.getValue());
+            userAnswers.add(userAnswer);
         }
-        return supplements;
+        
+        return userAnswers;
     }
 }
