@@ -11,10 +11,10 @@ spring:
   
   # Конфигурация email
   mail:
-    host: ${MAIL_HOST:mail.mailopost.ru}
+    host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:marketing@soloways.ru}
-    password: ${MAIL_PASSWORD:solowayS159963}
+    username: ${MAIL_USERNAME:pain.maker28@gmail.com}
+    password: ${MAIL_PASSWORD:pgnj elrq oguq deyd}
     properties:
       mail:
         smtp:
@@ -23,7 +23,7 @@ spring:
             enable: true
             required: true
           ssl:
-            trust: mail.mailopost.ru
+            trust: smtp.gmail.com
             enable: false
           connectiontimeout: 30000
           timeout: 30000
