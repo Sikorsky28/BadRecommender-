@@ -17,7 +17,7 @@ services:
       - key: MAIL_HOST
         value: smtp.msndr.net
       - key: MAIL_PORT
-        value: 587
+        value: 465
       - key: MAIL_USERNAME
         value: marketing@soloways.ru
       - key: MAIL_PASSWORD

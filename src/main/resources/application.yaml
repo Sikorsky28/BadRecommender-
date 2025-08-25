@@ -12,7 +12,7 @@ spring:
   # Конфигурация email
   mail:
     host: ${MAIL_HOST:smtp.msndr.net}
-    port: ${MAIL_PORT:587}
+    port: ${MAIL_PORT:465}
     username: ${MAIL_USERNAME:marketing@soloways.ru}
     password: ${MAIL_PASSWORD:e016348c8debb844652c586076fb1c8f}
     properties:
@@ -20,15 +20,15 @@ spring:
         smtp:
           auth: true
           starttls:
-            enable: true
-            required: true
+            enable: false
+            required: false
           ssl:
             trust: smtp.msndr.net
-            enable: false
+            enable: true
           connectiontimeout: 30000
           timeout: 30000
         transport:
-          protocol: smtp
+          protocol: smtps
 
 # Конфигурация Google Sheets (через переменные окружения)
 google:
