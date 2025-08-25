@@ -1415,8 +1415,8 @@
             const container = document.getElementById('question-container');
             const question = allQuestions[index];
             
-            // Создаем прогресс-бар для динамических вопросов
-            const progress = ((index + 1) / allQuestions.length) * 100;
+            // Создаем прогресс-бар для динамических вопросов (учитываем первые 2 вопроса)
+            const progress = ((index + 3) / 15) * 100;
             
             // Определяем текст кнопки "Назад"
             let backButtonText = "Назад";
@@ -1431,7 +1431,7 @@
             
             container.innerHTML = `
                 <div class="question-card">
-                    <div class="question-counter">Вопрос ${index + 1} из ${allQuestions.length}</div>
+                    <div class="question-counter">Вопрос ${index + 3} из 15</div>
                     <div class="progress-bar">
                         <div class="progress-fill" style="width: ${progress}%"></div>
                     </div>
