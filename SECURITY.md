@@ -15,6 +15,10 @@ MAIL_PASSWORD=your_secure_password_here
 GOOGLE_SHEETS_SPREADSHEET_ID=1xoz1hpg9XIcci4j9YByJiWQ2PYuiMb2cOX_Nu03rblM
 GOOGLE_CREDENTIALS_FILE=google-credentials.json
 
+# Telegram Bot
+TELEGRAM_BOT_USERNAME=SolowaysRecommendationsBot
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+
 # Настройки приложения
 PORT=8080
 SPRING_PROFILES_ACTIVE=production

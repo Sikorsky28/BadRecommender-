@@ -20,6 +20,7 @@ repositories {
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
+	implementation 'org.telegram:telegrambots-spring-boot-starter:6.8.0'
 	implementation('com.google.apis:google-api-services-sheets:v4-rev20220927-2.0.0') {
 		exclude group: 'commons-logging', module: 'commons-logging'
 	}
