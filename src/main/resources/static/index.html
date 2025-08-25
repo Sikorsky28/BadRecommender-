@@ -1650,6 +1650,9 @@
 
         // Отобразить рекомендации
         function displayRecommendations(result) {
+                console.log('🎯 Начинаем отображение рекомендаций');
+                console.log('📊 Полный результат:', result);
+                
                 // Отображаем основные рекомендации
                 const mainContainer = document.getElementById('main-recommendations');
                 console.log('Контейнер основных рекомендаций:', mainContainer);
@@ -1764,6 +1767,9 @@
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('results-content').classList.remove('hidden');
                 
+                console.log('🎯 Скрыли загрузку, показали контент результатов');
+                console.log('📊 Результат для отображения:', result);
+                
                 // Проверяем структуру ответа
                 if (!result || !result.mainRecommendations || !result.additionalRecommendations) {
                     console.error('❌ Неверная структура ответа:', result);
@@ -1772,7 +1778,9 @@
                     return;
                 }
                 
-                console.log('Структура ответа корректна');
+                console.log('✅ Структура ответа корректна');
+                console.log('📋 Основные рекомендации:', result.mainRecommendations.length);
+                console.log('📋 Дополнительные рекомендации:', result.additionalRecommendations.length);
                 
                 // Отображаем рекомендации
                 displayRecommendations(result);

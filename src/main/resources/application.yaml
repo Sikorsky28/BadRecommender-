@@ -11,22 +11,22 @@ spring:
   
   # Конфигурация email
   mail:
-    host: ${MAIL_HOST:smtp.gmail.com}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:pain.maker28@gmail.com}
-    password: ${MAIL_PASSWORD:pgnj elrq oguq deyd}
+    host: ${MAIL_HOST:smtp.mailopost.ru}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:marketing@soloways.ru}
+    password: ${MAIL_PASSWORD:solowayS159963}
     properties:
       mail:
         smtp:
           auth: true
-          starttls:
-            enable: true
-            required: true
           ssl:
-            trust: smtp.gmail.com
-            enable: false
+            enable: true
+            trust: smtp.mailopost.ru
+          socketFactory:
+            port: 465
+            class: javax.net.ssl.SSLSocketFactory
         transport:
-          protocol: smtp
+          protocol: smtps
 
 # Конфигурация Google Sheets (через переменные окружения)
 google:
