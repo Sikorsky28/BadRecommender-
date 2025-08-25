@@ -17,20 +17,32 @@ import java.util.Collections;
 @Configuration
 public class GoogleSheetsConfig {
 
-    @Value("${google.sheets.credentials-file}")
+    @Value("${google.sheets.credentials-file:google-credentials.json}")
     private String credentialsFilePath;
 
     @Bean
     public Sheets sheetsService() throws IOException, GeneralSecurityException {
-        GoogleCredential credential = GoogleCredential
-                .fromStream(new FileInputStream(credentialsFilePath))
-                .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
+        try {
+            // Пытаемся загрузить файл credentials
+            GoogleCredential credential = GoogleCredential
+                    .fromStream(new FileInputStream(credentialsFilePath))
+                    .createScoped(Collections.singleton(SheetsScopes.SPREADSHEETS));
 
-        return new Sheets.Builder(
-                GoogleNetHttpTransport.newTrustedTransport(),
-                GsonFactory.getDefaultInstance(),
-                credential)
-                .setApplicationName("Bad Recommender")
-                .build();
+            System.out.println("✅ Google Sheets API успешно инициализирована");
+            
+            return new Sheets.Builder(
+                    GoogleNetHttpTransport.newTrustedTransport(),
+                    GsonFactory.getDefaultInstance(),
+                    credential)
+                    .setApplicationName("Bad Recommender")
+                    .build();
+                    
+        } catch (IOException e) {
+            System.err.println("⚠️ Не удалось загрузить google-credentials.json: " + e.getMessage());
+            System.err.println("⚠️ Google Sheets API будет недоступна, используются fallback данные");
+            
+            // Возвращаем null, чтобы приложение могло запуститься
+            return null;
+        }
     }
 }

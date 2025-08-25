@@ -26,12 +26,23 @@ public class GoogleSheetsService {
     public GoogleSheetsService(Sheets sheetsService, @Value("${google.sheets.spreadsheet-id}") String spreadsheetId) {
         this.sheetsService = sheetsService;
         this.spreadsheetId = spreadsheetId;
+        
+        if (sheetsService == null) {
+            System.err.println("⚠️ Google Sheets API недоступна - будут использоваться fallback данные");
+        } else {
+            System.out.println("✅ Google Sheets API инициализирована");
+        }
     }
 
     /**
      * Загружает все добавки из Google Sheets
      */
     public List<Supplement> loadSupplements() throws IOException {
+        if (sheetsService == null) {
+            System.err.println("⚠️ Google Sheets API недоступна - возвращаем пустой список");
+            throw new IOException("Google Sheets API недоступна");
+        }
+        
         System.out.println("📊 Загружаем добавки из Google Sheets...");
         
         String range = SUPPLEMENTS_SHEET + "!A2:J"; // Пропускаем заголовок, включаем колонки H-J для описания, изображения и цены
