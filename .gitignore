@@ -38,6 +38,7 @@ out/
 
 # Google Sheets credentials
 google-credentials.json
+google-credentials-example.json
 
 # Environment variables
 .env
