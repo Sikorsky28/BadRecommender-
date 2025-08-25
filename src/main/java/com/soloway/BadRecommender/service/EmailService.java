@@ -49,37 +49,30 @@ public class EmailService {
         
         StringBuilder content = new StringBuilder();
         
-        content.append("Здравствуйте, ").append(userName).append("!\n\n");
-        content.append("Спасибо за прохождение опроса. Мы подготовили для вас персональные рекомендации БАДов.\n\n");
-        
-        content.append("Выбранная тема: ").append(getTopicDisplayName(selectedTopic)).append("\n\n");
+        content.append(userName).append(", спасибо, что прошли опрос по теме \"").append(getTopicDisplayName(selectedTopic)).append("\".\n\n");
+        content.append("На основе ваших данных мы собрали персональные рекомендации по БАДам:\n\n");
         
         // Основные рекомендации
-        content.append("🏆 ОСНОВНЫЕ РЕКОМЕНДАЦИИ:\n");
-        content.append("========================\n\n");
+        content.append("ОСНОВНЫЕ РЕКОМЕНДАЦИИ:\n");
+        content.append("========================\n");
         
-        for (int i = 0; i < mainRecommendations.size(); i++) {
-            Supplement supplement = mainRecommendations.get(i);
-            content.append(i + 1).append(". ").append(supplement.getName()).append("\n");
-            content.append("   Цена: ").append(supplement.getPrice() != null ? supplement.getPrice() : "Цена по запросу").append("\n");
-            content.append("   Описание: ").append(supplement.getDescription()).append("\n");
-            content.append("   Ссылка: ").append(supplement.getProductUrl()).append("\n\n");
+        for (Supplement supplement : mainRecommendations) {
+            content.append("• ").append(supplement.getName()).append("\n");
+            content.append("  ").append(supplement.getDescription()).append("\n\n");
         }
         
         // Дополнительные рекомендации
         if (!additionalRecommendations.isEmpty()) {
-            content.append("💡 ДОПОЛНИТЕЛЬНЫЕ РЕКОМЕНДАЦИИ:\n");
-            content.append("================================\n\n");
+            content.append("ДОПОЛНИТЕЛЬНЫЕ РЕКОМЕНДАЦИИ:\n");
+            content.append("==============================\n");
             
-            for (int i = 0; i < additionalRecommendations.size(); i++) {
-                Supplement supplement = additionalRecommendations.get(i);
-                content.append(i + 1).append(". ").append(supplement.getName()).append("\n");
-                content.append("   Цена: ").append(supplement.getPrice() != null ? supplement.getPrice() : "Цена по запросу").append("\n");
-                content.append("   Описание: ").append(supplement.getDescription()).append("\n");
-                content.append("   Ссылка: ").append(supplement.getProductUrl()).append("\n\n");
+            for (Supplement supplement : additionalRecommendations) {
+                content.append("• ").append(supplement.getName()).append("\n");
+                content.append("  ").append(supplement.getDescription()).append("\n\n");
             }
         }
         
+        content.append("Для заказа переходите на наш сайт: https://soloways.ru\n\n");
         content.append("С уважением,\n");
         content.append("Команда SOLOWAYS\n");
         content.append("https://soloways.ru");
