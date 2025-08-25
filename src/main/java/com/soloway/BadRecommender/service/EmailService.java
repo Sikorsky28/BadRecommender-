@@ -58,7 +58,8 @@ public class EmailService {
         
         for (Supplement supplement : mainRecommendations) {
             content.append("• ").append(supplement.getName()).append("\n");
-            content.append("  ").append(supplement.getDescription()).append("\n\n");
+            content.append("  ").append(supplement.getDescription()).append("\n");
+            content.append("  Ссылка: ").append(supplement.getProductUrl()).append("\n\n");
         }
         
         // Дополнительные рекомендации
@@ -68,7 +69,8 @@ public class EmailService {
             
             for (Supplement supplement : additionalRecommendations) {
                 content.append("• ").append(supplement.getName()).append("\n");
-                content.append("  ").append(supplement.getDescription()).append("\n\n");
+                content.append("  ").append(supplement.getDescription()).append("\n");
+                content.append("  Ссылка: ").append(supplement.getProductUrl()).append("\n\n");
             }
         }
         
