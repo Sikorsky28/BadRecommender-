@@ -38,3 +38,15 @@ out/
 
 # Google Sheets credentials
 google-credentials.json
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Secrets and sensitive data
+secrets/
+*.key
+*.pem
+*.p12

@@ -13,8 +13,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.msndr.net}
     port: ${MAIL_PORT:465}
-    username: ${MAIL_USERNAME:marketing@soloways.ru}
-    password: ${MAIL_PASSWORD:e016348c8debb844652c586076fb1c8f}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
