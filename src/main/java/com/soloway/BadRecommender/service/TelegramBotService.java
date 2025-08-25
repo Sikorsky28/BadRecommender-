@@ -23,14 +23,35 @@ public class TelegramBotService extends TelegramLongPollingBot {
 
     private Map<Long, TelegramUser> userSessions = new HashMap<>();
 
+    public TelegramBotService() {
+        super();
+        // Проверяем, что токен установлен
+        String token = System.getenv("TELEGRAM_BOT_TOKEN");
+        if (token == null || token.isEmpty()) {
+            System.err.println("⚠️ TELEGRAM_BOT_TOKEN не установлен - Telegram бот не будет работать");
+        } else {
+            System.out.println("✅ Telegram бот инициализирован");
+        }
+    }
+
     @Override
     public String getBotUsername() {
-        return System.getenv("TELEGRAM_BOT_USERNAME");
+        String username = System.getenv("TELEGRAM_BOT_USERNAME");
+        if (username == null || username.isEmpty()) {
+            System.err.println("⚠️ TELEGRAM_BOT_USERNAME не установлен");
+            return "SolowaysRecommendationsBot"; // fallback
+        }
+        return username;
     }
 
     @Override
     public String getBotToken() {
-        return System.getenv("TELEGRAM_BOT_TOKEN");
+        String token = System.getenv("TELEGRAM_BOT_TOKEN");
+        if (token == null || token.isEmpty()) {
+            System.err.println("⚠️ TELEGRAM_BOT_TOKEN не установлен");
+            return ""; // пустой токен приведет к ошибке, но не сломает приложение
+        }
+        return token;
     }
 
     @Override
