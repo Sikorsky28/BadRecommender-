@@ -15,13 +15,13 @@ services:
       - key: GOOGLE_SHEETS_SPREADSHEET_ID
         value: 1xoz1hpg9XIcci4j9YByJiWQ2PYuiMb2cOX_Nu03rblM
       - key: MAIL_HOST
-        value: smtp.gmail.com
+        value: smtp.mailopost.ru
       - key: MAIL_PORT
         value: 587
       - key: MAIL_USERNAME
-        value: pain.maker28@gmail.com
+        value: marketing@soloways.ru
       - key: MAIL_PASSWORD
-        value: pgnj elrq oguq deyd
+        value: solowayS159963
       - key: CORS_ALLOWED_ORIGINS
         value: "*"  # В production замените на реальные домены
     disk:
