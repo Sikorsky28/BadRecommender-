@@ -12,12 +12,19 @@ import java.util.stream.Collectors;
 public class RecommendationCalculationService {
 
     private final GoogleSheetsService googleSheetsService;
+    private final FallbackDataService fallbackDataService;
 
-    public RecommendationCalculationService(GoogleSheetsService googleSheetsService) {
+    public RecommendationCalculationService(GoogleSheetsService googleSheetsService, FallbackDataService fallbackDataService) {
         this.googleSheetsService = googleSheetsService;
-        if (googleSheetsService == null) {
-            System.err.println("⚠️ GoogleSheetsService недоступен - будут использоваться только fallback данные");
-        }
+        this.fallbackDataService = fallbackDataService;
+        System.out.println("✅ RecommendationCalculationService инициализирован с GoogleSheetsService");
+    }
+
+    // Конструктор для случая, когда GoogleSheetsService недоступен
+    public RecommendationCalculationService(FallbackDataService fallbackDataService) {
+        this.googleSheetsService = null;
+        this.fallbackDataService = fallbackDataService;
+        System.out.println("⚠️ RecommendationCalculationService инициализирован без GoogleSheetsService");
     }
 
     public RecommendationResult calculateRecommendations(List<UserAnswer> answers, String selectedTopic) {
@@ -29,20 +36,20 @@ public class RecommendationCalculationService {
         List<Supplement> allSupplements;
         if (googleSheetsService == null) {
             System.out.println("⚠️ GoogleSheetsService недоступен, используем fallback данные");
-            allSupplements = createFallbackSupplements();
+            allSupplements = fallbackDataService.getFallbackSupplements();
         } else {
             try {
                 allSupplements = googleSheetsService.loadSupplements();
             } catch (Exception e) {
                 System.out.println("⚠️ Ошибка загрузки из Google Sheets: " + e.getMessage());
                 System.out.println("⚠️ Используем fallback данные");
-                allSupplements = createFallbackSupplements();
+                allSupplements = fallbackDataService.getFallbackSupplements();
             }
             
             // Если добавки не загружены, используем fallback данные
             if (allSupplements.isEmpty()) {
                 System.out.println("⚠️ Добавки не загружены, используем fallback данные");
-                allSupplements = createFallbackSupplements();
+                allSupplements = fallbackDataService.getFallbackSupplements();
             }
         }
         
@@ -93,117 +100,6 @@ public class RecommendationCalculationService {
         }
 
         return new RecommendationResult(mainRecommendations, additionalRecommendations, supplementDetails);
-    }
-
-    private List<Supplement> createFallbackSupplements() {
-        List<Supplement> supplements = new ArrayList<>();
-        
-        // Бодрость и энергия
-        Supplement energy = new Supplement(1L, "ENERGY-001", "Energy", new com.soloway.BadRecommender.model.Category("Энергия"), 
-                Set.of("energy", "vitality"), true);
-        energy.setDescription("Комплекс витаминов группы B и аминокислот для повышения энергии и выносливости. Помогает бороться с усталостью и улучшает концентрацию внимания.");
-        supplements.add(energy);
-        
-        Supplement coq10 = new Supplement(2L, "COQ10-001", "Coenzyme Q10", new com.soloway.BadRecommender.model.Category("Энергия"), 
-                Set.of("energy", "heart", "antioxidant"), true);
-        coq10.setDescription("Мощный антиоксидант, который поддерживает работу сердца и повышает энергетический обмен в клетках. Особенно важен для людей старше 30 лет.");
-        supplements.add(coq10);
-        
-        Supplement iron = new Supplement(3L, "IRON-001", "Iron bisglycinate", new com.soloway.BadRecommender.model.Category("Энергия"), 
-                Set.of("energy", "iron", "hemoglobin"), true);
-        iron.setDescription("Железо в хелатной форме для повышения гемоглобина и борьбы с анемией. Улучшает кислородное питание тканей и снижает усталость.");
-        supplements.add(iron);
-        
-        Supplement tyrosine = new Supplement(4L, "TYR-001", "Tyrosine Complex", new com.soloway.BadRecommender.model.Category("Энергия"), 
-                Set.of("energy", "thyroid", "tyrosine"), true);
-        tyrosine.setDescription("Аминокислота, предшественник дофамина и норадреналина. Поддерживает работу щитовидной железы и улучшает когнитивные функции.");
-        supplements.add(tyrosine);
-        
-        // Крепкий сон, меньше стресса
-        Supplement magnesium = new Supplement(5L, "MAG-001", "Magnesium B6", new com.soloway.BadRecommender.model.Category("Сон"), 
-                Set.of("sleep", "stress", "magnesium", "nerves"), true);
-        magnesium.setDescription("Магний с витамином B6 для расслабления нервной системы и улучшения качества сна. Помогает справиться со стрессом и мышечным напряжением.");
-        supplements.add(magnesium);
-        
-        Supplement htp = new Supplement(6L, "5HTP-001", "5-HTP 100 мг", new com.soloway.BadRecommender.model.Category("Сон"), 
-                Set.of("sleep", "5-htp", "serotonin"), true);
-        htp.setDescription("Предшественник серотонина и мелатонина. Помогает нормализовать сон, улучшает настроение и снижает тревожность.");
-        supplements.add(htp);
-        
-        Supplement same = new Supplement(7L, "SAME-001", "Complex B-SAMe", new com.soloway.BadRecommender.model.Category("Сон"), 
-                Set.of("sleep", "stress", "same", "mood"), true);
-        same.setDescription("SAMe с витаминами группы B для поддержки настроения и работы печени. Помогает при депрессии и улучшает качество сна.");
-        supplements.add(same);
-        
-        // Контроль веса и аппетита
-        // Berberine + Betulin удален из системы - больше не продается
-        
-        Supplement appetite = new Supplement(9L, "APP-001", "Appetite Control", new com.soloway.BadRecommender.model.Category("Вес"), 
-                Set.of("weight", "appetite", "hunger"), true);
-        appetite.setDescription("Комплекс для контроля аппетита и чувства насыщения. Помогает снизить тягу к сладкому и перееданию.");
-        supplements.add(appetite);
-        
-        Supplement activeSlim = new Supplement(10L, "SLIM-001", "Active Slim", new com.soloway.BadRecommender.model.Category("Вес"), 
-                Set.of("weight", "slim", "metabolism"), true);
-        activeSlim.setDescription("Комплекс для активного сжигания жира и ускорения метаболизма. Подходит для людей, ведущих активный образ жизни.");
-        supplements.add(activeSlim);
-        
-        // Чистая кожа, крепкие волосы
-        Supplement collagen = new Supplement(11L, "COLL-001", "Collagen Extra 2000 мг", new com.soloway.BadRecommender.model.Category("Кожа"), 
-                Set.of("skin", "collagen", "anti-aging"), true);
-        collagen.setDescription("Основной белок кожи, волос и ногтей. Улучшает эластичность кожи, разглаживает морщины и укрепляет волосы.");
-        supplements.add(collagen);
-        
-        Supplement glutathione = new Supplement(12L, "GLUT-001", "Extra Glutathione", new com.soloway.BadRecommender.model.Category("Кожа"), 
-                Set.of("skin", "glutathione", "antioxidant"), true);
-        glutathione.setDescription("Главный антиоксидант организма. Защищает кожу от свободных радикалов, улучшает цвет лица и замедляет старение.");
-        supplements.add(glutathione);
-        
-        Supplement hyaluronic = new Supplement(13L, "HYAL-001", "Hyaluronic acid", new com.soloway.BadRecommender.model.Category("Кожа"), 
-                Set.of("skin", "hyaluronic", "hydration"), true);
-        hyaluronic.setDescription("Естественный увлажнитель кожи. Удерживает влагу, разглаживает морщины и улучшает текстуру кожи.");
-        supplements.add(hyaluronic);
-        
-        // Здоровое сердце и сосуды
-        Supplement omega = new Supplement(14L, "OMEGA-001", "Extra Omega-3 (EPA 600 / DHA 240)", new com.soloway.BadRecommender.model.Category("Сердце"), 
-                Set.of("heart", "omega-3", "epa", "dha"), true);
-        omega.setDescription("Полиненасыщенные жирные кислоты для здоровья сердца и сосудов. Снижает воспаление и поддерживает работу мозга.");
-        supplements.add(omega);
-        
-        Supplement resveratrol = new Supplement(15L, "RESV-001", "Resveratrol", new com.soloway.BadRecommender.model.Category("Сердце"), 
-                Set.of("heart", "resveratrol", "antioxidant"), true);
-        resveratrol.setDescription("Мощный антиоксидант из красного вина. Защищает сердце, замедляет старение и улучшает кровообращение.");
-        supplements.add(resveratrol);
-        
-        Supplement tmg = new Supplement(16L, "TMG-001", "Complex B-TMG", new com.soloway.BadRecommender.model.Category("Сердце"), 
-                Set.of("heart", "tmg", "homocysteine"), true);
-        tmg.setDescription("Триметилглицин для снижения уровня гомоцистеина и поддержки сердечно-сосудистой системы.");
-        supplements.add(tmg);
-        
-        // Сильный иммунитет
-        Supplement zinc = new Supplement(17L, "ZINC-001", "Zinc 25 mg", new com.soloway.BadRecommender.model.Category("Иммунитет"), 
-                Set.of("immunity", "zinc", "minerals"), true);
-        zinc.setDescription("Цинк для укрепления иммунитета и защиты от вирусов. Ускоряет заживление ран и поддерживает здоровье кожи.");
-        supplements.add(zinc);
-        
-        Supplement selenium = new Supplement(18L, "SEL-001", "Selenium 100 µг", new com.soloway.BadRecommender.model.Category("Иммунитет"), 
-                Set.of("immunity", "selenium", "antioxidant"), true);
-        selenium.setDescription("Микроэлемент-антиоксидант для укрепления иммунитета и защиты от свободных радикалов.");
-        supplements.add(selenium);
-        
-        Supplement vitc = new Supplement(19L, "VITC-001", "Vitamin C", new com.soloway.BadRecommender.model.Category("Иммунитет"), 
-                Set.of("immunity", "vitamin-c", "antioxidant"), true);
-        vitc.setDescription("Витамин C для укрепления иммунитета и защиты от простуды. Мощный антиоксидант для здоровья кожи и сосудов.");
-        supplements.add(vitc);
-        
-        System.out.println("✅ Создано fallback добавок: " + supplements.size());
-        
-        // Логируем описания для отладки
-        for (Supplement supplement : supplements) {
-            System.out.println("📝 " + supplement.getName() + ": " + supplement.getDescription());
-        }
-        
-        return supplements;
     }
 
     private double calculateSupplementScore(Supplement supplement, List<UserAnswer> answers, String selectedTopic) {

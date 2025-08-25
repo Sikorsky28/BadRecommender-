@@ -6,6 +6,7 @@ import com.soloway.BadRecommender.model.Supplement;
 import com.soloway.BadRecommender.model.Category;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -13,6 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@ConditionalOnProperty(name = "google.sheets.enabled", havingValue = "true")
 public class GoogleSheetsService {
 
     private final Sheets sheetsService;
@@ -22,16 +24,11 @@ public class GoogleSheetsService {
     private static final String SUPPLEMENTS_SHEET = "Supplements";
     private static final String CATEGORIES_SHEET = "Categories";
 
-    @Autowired(required = false)
+    @Autowired
     public GoogleSheetsService(Sheets sheetsService, @Value("${google.sheets.spreadsheet-id}") String spreadsheetId) {
         this.sheetsService = sheetsService;
         this.spreadsheetId = spreadsheetId;
-        
-        if (sheetsService == null) {
-            System.err.println("⚠️ Google Sheets API недоступна - будут использоваться fallback данные");
-        } else {
-            System.out.println("✅ Google Sheets API инициализирована");
-        }
+        System.out.println("✅ Google Sheets API инициализирована");
     }
 
     /**
