@@ -23,6 +23,7 @@ public class EmailService {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(userEmail);
+            message.setFrom("marketing@soloways.ru");
             message.setSubject("Ваши персональные рекомендации БАДов от SOLOWAYS");
             
             String emailContent = buildEmailContent(userName, selectedTopic, mainRecommendations, additionalRecommendations);
@@ -34,6 +35,7 @@ public class EmailService {
             
         } catch (Exception e) {
             System.err.println("❌ Ошибка отправки email: " + e.getMessage());
+            System.err.println("Детали ошибки: " + e.getClass().getSimpleName());
             e.printStackTrace();
         }
     }

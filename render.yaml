@@ -16,8 +16,8 @@ services:
         value: 1xoz1hpg9XIcci4j9YByJiWQ2PYuiMb2cOX_Nu03rblM
       - key: MAIL_HOST
         value: smtp.mailopost.ru
-      - key: MAIL_PORT
-        value: 587
+             - key: MAIL_PORT
+         value: 465
       - key: MAIL_USERNAME
         value: marketing@soloways.ru
       - key: MAIL_PASSWORD
