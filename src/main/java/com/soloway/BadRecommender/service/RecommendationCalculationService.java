@@ -15,6 +15,9 @@ public class RecommendationCalculationService {
 
     public RecommendationCalculationService(GoogleSheetsService googleSheetsService) {
         this.googleSheetsService = googleSheetsService;
+        if (googleSheetsService == null) {
+            System.err.println("⚠️ GoogleSheetsService недоступен - будут использоваться только fallback данные");
+        }
     }
 
     public RecommendationResult calculateRecommendations(List<UserAnswer> answers, String selectedTopic) {
@@ -24,18 +27,23 @@ public class RecommendationCalculationService {
 
         // Получаем все добавки
         List<Supplement> allSupplements;
-        try {
-            allSupplements = googleSheetsService.loadSupplements();
-        } catch (Exception e) {
-            System.out.println("⚠️ Ошибка загрузки из Google Sheets: " + e.getMessage());
-            System.out.println("⚠️ Используем fallback данные");
+        if (googleSheetsService == null) {
+            System.out.println("⚠️ GoogleSheetsService недоступен, используем fallback данные");
             allSupplements = createFallbackSupplements();
-        }
-        
-        // Если добавки не загружены, используем fallback данные
-        if (allSupplements.isEmpty()) {
-            System.out.println("⚠️ Добавки не загружены, используем fallback данные");
-            allSupplements = createFallbackSupplements();
+        } else {
+            try {
+                allSupplements = googleSheetsService.loadSupplements();
+            } catch (Exception e) {
+                System.out.println("⚠️ Ошибка загрузки из Google Sheets: " + e.getMessage());
+                System.out.println("⚠️ Используем fallback данные");
+                allSupplements = createFallbackSupplements();
+            }
+            
+            // Если добавки не загружены, используем fallback данные
+            if (allSupplements.isEmpty()) {
+                System.out.println("⚠️ Добавки не загружены, используем fallback данные");
+                allSupplements = createFallbackSupplements();
+            }
         }
         
         // Рассчитываем баллы для каждой добавки

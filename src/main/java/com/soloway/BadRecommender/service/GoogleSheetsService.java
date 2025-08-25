@@ -22,7 +22,7 @@ public class GoogleSheetsService {
     private static final String SUPPLEMENTS_SHEET = "Supplements";
     private static final String CATEGORIES_SHEET = "Categories";
 
-    @Autowired
+    @Autowired(required = false)
     public GoogleSheetsService(Sheets sheetsService, @Value("${google.sheets.spreadsheet-id}") String spreadsheetId) {
         this.sheetsService = sheetsService;
         this.spreadsheetId = spreadsheetId;

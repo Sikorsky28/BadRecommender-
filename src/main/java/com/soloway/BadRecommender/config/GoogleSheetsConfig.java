@@ -6,6 +6,7 @@ import com.google.api.client.json.gson.GsonFactory;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,6 +22,7 @@ public class GoogleSheetsConfig {
     private String credentialsFilePath;
 
     @Bean
+    @ConditionalOnProperty(name = "google.sheets.enabled", havingValue = "true")
     public Sheets sheetsService() throws IOException, GeneralSecurityException {
         try {
             // Пытаемся загрузить файл credentials
@@ -41,8 +43,8 @@ public class GoogleSheetsConfig {
             System.err.println("⚠️ Не удалось загрузить google-credentials.json: " + e.getMessage());
             System.err.println("⚠️ Google Sheets API будет недоступна, используются fallback данные");
             
-            // Возвращаем null, чтобы приложение могло запуститься
-            return null;
+            // Выбрасываем исключение, чтобы Spring не создавал bean
+            throw new RuntimeException("Google Sheets API недоступна", e);
         }
     }
 }
