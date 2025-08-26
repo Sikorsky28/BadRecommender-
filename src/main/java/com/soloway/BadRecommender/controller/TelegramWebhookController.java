@@ -251,13 +251,13 @@ public class TelegramWebhookController {
                 keyboardRows.add(row);
             }
         } else {
-            // Для обычных вопросов - размещаем по 2 кнопки в ряду
+            // Для обычных вопросов - размещаем по 3 кнопки в ряду (как на скриншоте)
             KeyboardRow row = new KeyboardRow();
             for (String option : options) {
                 KeyboardButton button = new KeyboardButton();
                 button.setText(option);
                 row.add(button);
-                if (row.size() == 2) {
+                if (row.size() == 3) {
                     keyboardRows.add(row);
                     row = new KeyboardRow();
                 }
