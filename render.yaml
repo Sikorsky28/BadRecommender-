@@ -30,6 +30,12 @@ services:
         value: 300000
       - key: CACHE_MAX_SIZE
         value: 1000
+      - key: TELEGRAM_BOT_ENABLED
+        value: false
+      - key: TELEGRAM_BOT_TOKEN
+        value: ""
+      - key: TELEGRAM_BOT_USERNAME
+        value: ""
     disk:
       name: data
       mountPath: /app/data

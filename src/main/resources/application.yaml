@@ -36,6 +36,13 @@ google:
     spreadsheet-id: ${GOOGLE_SHEETS_SPREADSHEET_ID:1xoz1hpg9XIcci4j9YByJiWQ2PYuiMb2cOX_Nu03rblM}
     credentials-file: ${GOOGLE_CREDENTIALS_FILE:google-credentials.json}
 
+# Конфигурация Telegram бота
+telegram:
+  bot:
+    enabled: ${TELEGRAM_BOT_ENABLED:false}
+    token: ${TELEGRAM_BOT_TOKEN:}
+    username: ${TELEGRAM_BOT_USERNAME:}
+
 # Настройки кэша для production
 cache:
   ttl: ${CACHE_TTL:300000}  # 5 минут в миллисекундах

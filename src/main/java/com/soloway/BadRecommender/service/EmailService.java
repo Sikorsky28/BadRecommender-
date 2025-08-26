@@ -15,6 +15,28 @@ public class EmailService {
     private JavaMailSender mailSender;
 
     /**
+     * Отправляет простой email
+     */
+    public void sendEmail(String to, String subject, String text) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo(to);
+            message.setFrom("marketing@soloways.ru");
+            message.setSubject(subject);
+            message.setText(text);
+            
+            mailSender.send(message);
+            
+            System.out.println("✅ Email отправлен на: " + to);
+            
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка отправки email: " + e.getMessage());
+            System.err.println("Детали ошибки: " + e.getClass().getSimpleName());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Отправляет email с рекомендациями пользователю
      */
     public void sendRecommendationsEmail(String userEmail, String userName, String selectedTopic, 
