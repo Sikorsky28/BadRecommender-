@@ -254,18 +254,27 @@ public class TelegramWebhookController {
         keyboard.setSelective(true);
 
         List<KeyboardRow> keyboardRows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
-
-        for (String option : options) {
-            row.add(option);
-            if (row.size() == 2) {
+        
+        // Для вопросов с выбором темы - размещаем по 1 кнопке в ряду
+        if (options.length > 10) {
+            for (String option : options) {
+                KeyboardRow row = new KeyboardRow();
+                row.add(option);
                 keyboardRows.add(row);
-                row = new KeyboardRow();
             }
-        }
-
-        if (!row.isEmpty()) {
-            keyboardRows.add(row);
+        } else {
+            // Для обычных вопросов - размещаем по 2 кнопки в ряду
+            KeyboardRow row = new KeyboardRow();
+            for (String option : options) {
+                row.add(option);
+                if (row.size() == 2) {
+                    keyboardRows.add(row);
+                    row = new KeyboardRow();
+                }
+            }
+            if (!row.isEmpty()) {
+                keyboardRows.add(row);
+            }
         }
 
         keyboard.setKeyboard(keyboardRows);
@@ -302,8 +311,68 @@ public class TelegramWebhookController {
 
     private void sendMessageWithKeyboard(Long chatId, String text, ReplyKeyboardMarkup keyboard) {
         try {
-            // Упрощенная версия без клавиатуры
-            sendMessage(chatId, text);
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendMessage";
+            
+            // Создаем JSON для клавиатуры
+            StringBuilder keyboardJson = new StringBuilder();
+            keyboardJson.append("\"reply_markup\":{");
+            keyboardJson.append("\"keyboard\":[");
+            
+            List<List<String>> keyboardButtons = new ArrayList<>();
+            List<KeyboardRow> rows = keyboard.getKeyboard();
+            
+            for (KeyboardRow row : rows) {
+                List<String> buttonRow = new ArrayList<>();
+                for (Object button : row) {
+                    buttonRow.add(button.toString());
+                }
+                keyboardButtons.add(buttonRow);
+            }
+            
+            // Добавляем кнопки в JSON
+            for (int i = 0; i < keyboardButtons.size(); i++) {
+                keyboardJson.append("[");
+                List<String> row = keyboardButtons.get(i);
+                for (int j = 0; j < row.size(); j++) {
+                    keyboardJson.append("\"").append(row.get(j).replace("\"", "\\\"")).append("\"");
+                    if (j < row.size() - 1) {
+                        keyboardJson.append(",");
+                    }
+                }
+                keyboardJson.append("]");
+                if (i < keyboardButtons.size() - 1) {
+                    keyboardJson.append(",");
+                }
+            }
+            
+            keyboardJson.append("],");
+            keyboardJson.append("\"resize_keyboard\":").append(keyboard.getResizeKeyboard()).append(",");
+            keyboardJson.append("\"one_time_keyboard\":").append(keyboard.getOneTimeKeyboard()).append(",");
+            keyboardJson.append("\"selective\":").append(keyboard.getSelective());
+            keyboardJson.append("}");
+            
+            String jsonBody = String.format(
+                "{\"chat_id\":\"%s\",\"text\":\"%s\",\"parse_mode\":\"Markdown\",%s}",
+                chatId, 
+                text.replace("\"", "\\\"").replace("\n", "\\n"),
+                keyboardJson.toString()
+            );
+
+            logger.info("Отправка сообщения с клавиатурой в чат {}: {}", chatId, text);
+            logger.info("URL: {}", url);
+            logger.info("JSON: {}", jsonBody);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Сообщение с клавиатурой отправлено в чат {}: {}", chatId, response),
+                        error -> logger.error("❌ Ошибка отправки сообщения с клавиатурой в чат {}: {}", chatId, error.getMessage())
+                    );
+
         } catch (Exception e) {
             logger.error("Error sending message with keyboard to {}: {}", chatId, e.getMessage(), e);
         }
