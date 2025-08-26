@@ -193,12 +193,12 @@ public class TelegramWebhookController {
     }
 
     private void handleCompletedSurvey(TelegramUser user, String message) {
-        if ("/start".equals(message) || "Начать заново".equals(message)) {
+        if ("/start".equals(message)) {
             handleStartCommand(user);
-        } else if ("/help".equals(message) || "Помощь".equals(message)) {
+        } else if ("/help".equals(message)) {
             handleHelpCommand(user);
         } else {
-            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте кнопки ниже для навигации.");
+            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте команду /start для начала нового опроса.");
         }
     }
 
@@ -257,20 +257,16 @@ public class TelegramWebhookController {
         try {
             RecommendationCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
-            StringBuilder message = new StringBuilder();
-            message.append("Отлично! Теперь введите ваш email для получения персональных рекомендаций:");
+            String message = "Отлично! Теперь введите ваш email для получения персональных рекомендаций:";
             
-            // Создаем клавиатуру с кнопками навигации
-            ReplyKeyboardMarkup keyboard = createNavigationKeyboard();
-            sendMessageWithKeyboard(user.getChatId(), message.toString(), keyboard);
+            sendMessage(user.getChatId(), message);
             
         } catch (Exception e) {
             logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
             
             String completionMessage = "Отлично! Теперь введите ваш email для получения персональных рекомендаций:";
             
-            ReplyKeyboardMarkup keyboard = createNavigationKeyboard();
-            sendMessageWithKeyboard(user.getChatId(), completionMessage, keyboard);
+            sendMessage(user.getChatId(), completionMessage);
         }
     }
 
@@ -332,31 +328,7 @@ public class TelegramWebhookController {
         return keyboard;
     }
 
-    private ReplyKeyboardMarkup createNavigationKeyboard() {
-        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
-        keyboard.setResizeKeyboard(true);
-        keyboard.setOneTimeKeyboard(false);
-        keyboard.setSelective(true);
 
-        List<KeyboardRow> keyboardRows = new ArrayList<>();
-        
-        // Первый ряд: Начать заново
-        KeyboardRow row1 = new KeyboardRow();
-        KeyboardButton startButton = new KeyboardButton();
-        startButton.setText("Начать заново");
-        row1.add(startButton);
-        keyboardRows.add(row1);
-        
-        // Второй ряд: Помощь
-        KeyboardRow row2 = new KeyboardRow();
-        KeyboardButton helpButton = new KeyboardButton();
-        helpButton.setText("Помощь");
-        row2.add(helpButton);
-        keyboardRows.add(row2);
-
-        keyboard.setKeyboard(keyboardRows);
-        return keyboard;
-    }
 
     private void sendMessage(Long chatId, String text) {
         try {
