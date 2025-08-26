@@ -31,11 +31,11 @@ services:
       - key: CACHE_MAX_SIZE
         value: 1000
       - key: TELEGRAM_BOT_ENABLED
-        value: false
+        value: true
       - key: TELEGRAM_BOT_TOKEN
-        value: ""
+        value: 7368002281:AAGVqM_9WOoEAgU8f4tdP_F5rnBK-Lsq460
       - key: TELEGRAM_BOT_USERNAME
-        value: ""
+        value: SolowaysRecommendationsBot
     disk:
       name: data
       mountPath: /app/data

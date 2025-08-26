@@ -14,9 +14,9 @@ MAIL_PASSWORD=e016348c8debb844652c586076fb1c8f
 CORS_ALLOWED_ORIGINS=https://*.tilda.ws,https://*.tilda.site,https://*.tilda.com,https://your-tilda-site.com,https://www.your-tilda-site.com
 CACHE_TTL=300000
 CACHE_MAX_SIZE=1000
-TELEGRAM_BOT_ENABLED=false
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_BOT_USERNAME=
+TELEGRAM_BOT_ENABLED=true
+TELEGRAM_BOT_TOKEN=7368002281:AAGVqM_9WOoEAgU8f4tdP_F5rnBK-Lsq460
+TELEGRAM_BOT_USERNAME=SolowaysRecommendationsBot
 ```
 
 ## Команды сборки и запуска
@@ -45,21 +45,22 @@ java -jar build/libs/BadRecommender-0.0.1-SNAPSHOT.jar
 3. Проверьте логи на наличие ошибок
 4. Протестируйте API endpoints
 
-## Настройка Telegram бота (опционально)
+## Telegram бот
 
-1. Создайте бота через @BotFather в Telegram
-2. Получите токен и username
-3. Установите переменные:
-   ```
-   TELEGRAM_BOT_ENABLED=true
-   TELEGRAM_BOT_TOKEN=ваш_токен
-   TELEGRAM_BOT_USERNAME=ваш_username
-   ```
-4. Протестируйте бота командой `/start`
+**Бот активирован и готов к работе!**
+
+- **Username:** @SolowaysRecommendationsBot
+- **Токен:** 7368002281:AAGVqM_9WOoEAgU8f4tdP_F5rnBK-Lsq460
+- **Статус:** Включен
+
+### Тестирование бота:
+1. Найдите @SolowaysRecommendationsBot в Telegram
+2. Отправьте `/start`
+3. Пройдите тестовый опрос
 
 ## Важно!
 
 - Файл `google-credentials.json` должен быть в репозитории
 - Замените `your-tilda-site.com` на реальный домен
 - Все пароли уже настроены и безопасны
-- Telegram бот отключен по умолчанию
+- Telegram бот включен и готов к работе
