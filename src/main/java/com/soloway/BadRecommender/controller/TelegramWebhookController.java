@@ -280,32 +280,14 @@ public class TelegramWebhookController {
         InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
         
-        // Для вопросов с выбором темы - размещаем по 1 кнопке в ряду
-        if (options.length > 10) {
-            for (String option : options) {
-                List<InlineKeyboardButton> row = new ArrayList<>();
-                InlineKeyboardButton button = new InlineKeyboardButton();
-                button.setText(option);
-                button.setCallbackData(option);
-                row.add(button);
-                keyboardRows.add(row);
-            }
-        } else {
-            // Для обычных вопросов - размещаем по 3 кнопки в ряду (как на скриншоте)
+        // Размещаем все кнопки по одной в ряду (друг под другом)
+        for (String option : options) {
             List<InlineKeyboardButton> row = new ArrayList<>();
-            for (String option : options) {
-                InlineKeyboardButton button = new InlineKeyboardButton();
-                button.setText(option);
-                button.setCallbackData(option);
-                row.add(button);
-                if (row.size() == 3) {
-                    keyboardRows.add(row);
-                    row = new ArrayList<>();
-                }
-            }
-            if (!row.isEmpty()) {
-                keyboardRows.add(row);
-            }
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(option);
+            button.setCallbackData(option);
+            row.add(button);
+            keyboardRows.add(row);
         }
 
         keyboard.setKeyboard(keyboardRows);
