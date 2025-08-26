@@ -18,6 +18,7 @@ public class TelegramUser {
     private LocalDateTime lastActivity;
     private String email;
     private boolean surveyCompleted;
+    private String selectedTopic;
 
     public enum UserState {
         START,
@@ -114,6 +115,14 @@ public class TelegramUser {
 
     public void setSurveyCompleted(boolean surveyCompleted) {
         this.surveyCompleted = surveyCompleted;
+    }
+
+    public String getSelectedTopic() {
+        return selectedTopic;
+    }
+
+    public void setSelectedTopic(String selectedTopic) {
+        this.selectedTopic = selectedTopic;
     }
 
     // Вспомогательные методы

@@ -3,6 +3,7 @@ package com.soloway.BadRecommender.controller;
 import com.soloway.BadRecommender.config.TelegramBotConfig;
 import com.soloway.BadRecommender.model.TelegramUser;
 import com.soloway.BadRecommender.service.TelegramUserService;
+import com.soloway.BadRecommender.service.TelegramSurveyService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,12 +29,14 @@ public class TelegramWebhookController {
 
     private final TelegramBotConfig botConfig;
     private final TelegramUserService userService;
+    private final TelegramSurveyService surveyService;
     private final WebClient webClient;
 
     @Autowired
-    public TelegramWebhookController(TelegramBotConfig botConfig, TelegramUserService userService) {
+    public TelegramWebhookController(TelegramBotConfig botConfig, TelegramUserService userService, TelegramSurveyService surveyService) {
         this.botConfig = botConfig;
         this.userService = userService;
+        this.surveyService = surveyService;
         this.webClient = WebClient.builder().build();
         logger.info("TelegramWebhookController создан");
     }
@@ -107,15 +110,15 @@ public class TelegramWebhookController {
         logger.info("Выполнение команды /start для пользователя {}", user.getUsername());
 
         user.resetSurvey();
-        user.setState(TelegramUser.UserState.WAITING_FOR_EMAIL);
+        user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
 
         String welcomeMessage = "👋 Привет! Я бот для проведения опроса о здоровье.\n\n" +
-                "Для начала мне нужен ваш email адрес, чтобы отправить результаты опроса.\n\n" +
-                "Пожалуйста, отправьте ваш email:";
+                "Ответьте на несколько вопросов — подберём, что вам подойдет.\n\n" +
+                "Начнем с выбора темы:";
 
         logger.info("Отправка приветственного сообщения пользователю {}", user.getUsername());
 
-        sendMessage(user.getChatId(), welcomeMessage);
+        sendNextQuestion(user);
     }
 
     private void handleHelpCommand(TelegramUser user) {
@@ -130,19 +133,16 @@ public class TelegramWebhookController {
 
     private void handleResetCommand(TelegramUser user) {
         user.resetSurvey();
-        user.setState(TelegramUser.UserState.WAITING_FOR_EMAIL);
+        user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
 
         String resetMessage = "🔄 Опрос сброшен. Давайте начнем заново!\n\n" +
-                "Пожалуйста, отправьте ваш email адрес:";
+                "Начнем с выбора темы:";
 
-        sendMessage(user.getChatId(), resetMessage);
+        sendNextQuestion(user);
     }
 
     private void handleRegularMessage(TelegramUser user, String messageText) {
         switch (user.getState()) {
-            case WAITING_FOR_EMAIL:
-                handleEmailInput(user, messageText);
-                break;
             case SURVEY_IN_PROGRESS:
                 handleSurveyAnswer(user, messageText);
                 break;
@@ -154,26 +154,14 @@ public class TelegramWebhookController {
         }
     }
 
-    private void handleEmailInput(TelegramUser user, String email) {
-        if (isValidEmail(email)) {
-            user.setEmail(email);
-            user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
-            user.setCurrentQuestionIndex(0);
 
-            sendMessage(user.getChatId(), "✅ Email сохранен: " + email + "\n\n" +
-                    "Теперь давайте начнем опрос! Отвечайте на вопросы, выбирая один из вариантов ответа.");
-
-            sendNextQuestion(user);
-        } else {
-            sendMessage(user.getChatId(), "❌ Неверный формат email. Пожалуйста, введите корректный email адрес:");
-        }
-    }
 
     private void handleSurveyAnswer(TelegramUser user, String answer) {
-        user.addAnswer(user.getCurrentQuestionIndex(), answer);
-        user.nextQuestion();
-
-        if (user.getCurrentQuestionIndex() >= 15) {
+        // Обрабатываем ответ через сервис опроса
+        surveyService.processAnswer(user, answer);
+        
+        // Проверяем, завершен ли опрос
+        if (surveyService.isSurveyCompleted(user)) {
             completeSurvey(user);
         } else {
             sendNextQuestion(user);
@@ -189,12 +177,20 @@ public class TelegramWebhookController {
     }
 
     private void sendNextQuestion(TelegramUser user) {
-        String questionText = "Вопрос " + (user.getCurrentQuestionIndex() + 1) + " из 15:\n\n" +
-                "Как вы оцениваете свое общее самочувствие?";
+        TelegramSurveyService.SurveyQuestion question = surveyService.getNextQuestion(user);
+        
+        if (question == null) {
+            completeSurvey(user);
+            return;
+        }
+        
+        String selectedTopic = user.getSelectedTopic();
+        int totalQuestions = selectedTopic != null ? surveyService.getTotalQuestionsForTopic(selectedTopic) : 1;
+        int currentQuestion = user.getCurrentQuestionIndex() + 1;
+        
+        String questionText = "Вопрос " + currentQuestion + " из " + totalQuestions + ":\n\n" + question.getText();
 
-        ReplyKeyboardMarkup keyboard = createAnswerKeyboard(
-                "Отлично", "Хорошо", "Удовлетворительно", "Плохо"
-        );
+        ReplyKeyboardMarkup keyboard = createAnswerKeyboard(question.getOptions().toArray(new String[0]));
 
         sendMessageWithKeyboard(user.getChatId(), questionText, keyboard);
     }
@@ -204,16 +200,14 @@ public class TelegramWebhookController {
         user.setSurveyCompleted(true);
 
         String completionMessage = "🎉 Опрос завершен!\n\n" +
-                "Спасибо за ваши ответы. Мы обрабатываем результаты и отправим их на ваш email: " +
-                user.getEmail() + "\n\n" +
+                "Спасибо за ваши ответы. Мы обрабатываем результаты и подбираем персональные рекомендации.\n\n" +
+                "Для получения результатов на email, отправьте ваш email адрес.\n\n" +
                 "Используйте /start для нового опроса или /help для справки.";
 
         sendMessage(user.getChatId(), completionMessage);
     }
 
-    private boolean isValidEmail(String email) {
-        return email != null && email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
-    }
+
 
     private ReplyKeyboardMarkup createAnswerKeyboard(String... options) {
         ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
