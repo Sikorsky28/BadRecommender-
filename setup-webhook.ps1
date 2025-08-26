@@ -41,7 +41,7 @@ Write-Host "🔗 Настраиваем новый webhook..." -ForegroundColor 
 $webhookUrl = "$AppUrl/webhook/$BotToken"
 $webhookData = @{
     url = $webhookUrl
-    allowed_updates = @("message")
+    allowed_updates = @("message", "callback_query")
     drop_pending_updates = $true
 } | ConvertTo-Json
 
