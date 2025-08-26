@@ -67,7 +67,8 @@ public class TelegramBotService extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        logger.info("Получено обновление: {}", update);
+        logger.info("=== ПОЛУЧЕНО ОБНОВЛЕНИЕ ОТ TELEGRAM ===");
+        logger.info("Update: {}", update);
         
         if (!botConfig.isBotEnabled()) {
             logger.warn("Telegram bot is disabled");
@@ -81,7 +82,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
             String firstName = update.getMessage().getFrom().getFirstName();
             String lastName = update.getMessage().getFrom().getLastName();
 
-            logger.info("Received message from {} ({}): {}", username, chatId, messageText);
+            logger.info("✅ Received message from {} ({}): {}", username, chatId, messageText);
 
             try {
                 handleMessage(chatId, username, firstName, lastName, messageText);
