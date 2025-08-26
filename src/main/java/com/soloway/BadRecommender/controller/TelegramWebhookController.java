@@ -4,6 +4,7 @@ import com.soloway.BadRecommender.config.TelegramBotConfig;
 import com.soloway.BadRecommender.model.TelegramUser;
 import com.soloway.BadRecommender.service.TelegramUserService;
 import com.soloway.BadRecommender.service.TelegramSurveyService;
+import com.soloway.BadRecommender.service.RecommendationCalculationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -199,12 +200,49 @@ public class TelegramWebhookController {
         user.setState(TelegramUser.UserState.SURVEY_COMPLETED);
         user.setSurveyCompleted(true);
 
-        String completionMessage = "🎉 Опрос завершен!\n\n" +
-                "Спасибо за ваши ответы. Мы обрабатываем результаты и подбираем персональные рекомендации.\n\n" +
-                "Для получения результатов на email, отправьте ваш email адрес.\n\n" +
-                "Используйте /start для нового опроса или /help для справки.";
+        // Получаем рекомендации
+        try {
+            RecommendationCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
+            
+            StringBuilder message = new StringBuilder();
+            message.append("🎉 Опрос завершен!\n\n");
+            message.append("📋 Ваши персональные рекомендации:\n\n");
+            
+            // Основные рекомендации
+            if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
+                message.append("🔹 Основные рекомендации:\n");
+                for (int i = 0; i < Math.min(result.getMainRecommendations().size(), 3); i++) {
+                    String supplementName = result.getMainRecommendations().get(i).getName();
+                    message.append("• ").append(supplementName).append("\n");
+                }
+                message.append("\n");
+            }
+            
+            // Дополнительные рекомендации
+            if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
+                message.append("🔹 Дополнительные рекомендации:\n");
+                for (int i = 0; i < Math.min(result.getAdditionalRecommendations().size(), 2); i++) {
+                    String supplementName = result.getAdditionalRecommendations().get(i).getName();
+                    message.append("• ").append(supplementName).append("\n");
+                }
+                message.append("\n");
+            }
+            
+            message.append("💡 Для получения подробной информации и покупки БАДов, посетите наш сайт.\n\n");
+            message.append("Используйте /start для нового опроса или /help для справки.");
+            
+            sendMessage(user.getChatId(), message.toString());
+            
+        } catch (Exception e) {
+            logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
+            
+            String completionMessage = "🎉 Опрос завершен!\n\n" +
+                    "Спасибо за ваши ответы. Мы обрабатываем результаты и подбираем персональные рекомендации.\n\n" +
+                    "Для получения результатов на email, отправьте ваш email адрес.\n\n" +
+                    "Используйте /start для нового опроса или /help для справки.";
 
-        sendMessage(user.getChatId(), completionMessage);
+            sendMessage(user.getChatId(), completionMessage);
+        }
     }
 
 
