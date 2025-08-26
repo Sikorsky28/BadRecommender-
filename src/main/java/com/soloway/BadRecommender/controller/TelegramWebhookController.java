@@ -2,6 +2,7 @@ package com.soloway.BadRecommender.controller;
 
 import com.soloway.BadRecommender.config.TelegramBotConfig;
 import com.soloway.BadRecommender.model.TelegramUser;
+import com.soloway.BadRecommender.model.Supplement;
 import com.soloway.BadRecommender.service.TelegramUserService;
 import com.soloway.BadRecommender.service.TelegramSurveyService;
 import com.soloway.BadRecommender.service.RecommendationCalculationService;
@@ -212,7 +213,7 @@ public class TelegramWebhookController {
         } else if ("/help".equals(message)) {
             handleHelpCommand(user);
         } else {
-            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте команду /start для начала нового опроса.");
+            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте команду /start для начала нового опроса или /help для справки.");
         }
     }
 
@@ -281,16 +282,47 @@ public class TelegramWebhookController {
         try {
             RecommendationCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
-            String message = "Отлично! Теперь введите ваш email для получения персональных рекомендаций:";
+            StringBuilder message = new StringBuilder();
+            message.append("*🎯 Ваши персональные рекомендации:*\n\n");
             
-            sendMessage(user.getChatId(), message);
+            // Основные рекомендации
+            if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
+                message.append("*🏆 Основные рекомендации:*\n");
+                for (int i = 0; i < result.getMainRecommendations().size(); i++) {
+                    Supplement supplement = result.getMainRecommendations().get(i);
+                    message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
+                    message.append("   ").append(supplement.getDescription()).append("\n");
+                    if (supplement.getProductUrl() != null && !supplement.getProductUrl().isEmpty()) {
+                        message.append("   [🛒 Купить](").append(supplement.getProductUrl()).append(")\n");
+                    }
+                    message.append("\n");
+                }
+            }
+            
+            // Дополнительные рекомендации
+            if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
+                message.append("*💡 Дополнительные рекомендации:*\n");
+                for (int i = 0; i < result.getAdditionalRecommendations().size(); i++) {
+                    Supplement supplement = result.getAdditionalRecommendations().get(i);
+                    message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
+                    message.append("   ").append(supplement.getDescription()).append("\n");
+                    if (supplement.getProductUrl() != null && !supplement.getProductUrl().isEmpty()) {
+                        message.append("   [🛒 Купить](").append(supplement.getProductUrl()).append(")\n");
+                    }
+                    message.append("\n");
+                }
+            }
+            
+            message.append("💡 *Совет:* Проконсультируйтесь с врачом перед приемом любых добавок.\n\n");
+            message.append("🔄 Хотите пройти опрос заново? Отправьте /start");
+            
+            sendMessage(user.getChatId(), message.toString());
             
         } catch (Exception e) {
             logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
             
-            String completionMessage = "Отлично! Теперь введите ваш email для получения персональных рекомендаций:";
-            
-            sendMessage(user.getChatId(), completionMessage);
+            String errorMessage = "К сожалению, произошла ошибка при формировании рекомендаций. Попробуйте пройти опрос заново, отправив /start";
+            sendMessage(user.getChatId(), errorMessage);
         }
     }
 
