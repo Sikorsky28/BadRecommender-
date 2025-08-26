@@ -18,13 +18,13 @@ public class BadRecommenderApplication {
 	public void handleContextRefresh(ContextRefreshedEvent event) {
 		ApplicationContext context = event.getApplicationContext();
 		
-		// Проверяем наличие Telegram бота
-		try {
-			Object telegramBot = context.getBean("telegramBotService");
-			System.out.println("✅ Telegram бот успешно зарегистрирован в Spring контексте");
-		} catch (Exception e) {
-			System.out.println("⚠️ Telegram бот не найден в Spring контексте: " + e.getMessage());
-		}
+		                // Проверяем наличие Telegram webhook контроллера
+                try {
+                    Object telegramWebhook = context.getBean("telegramWebhookController");
+                    System.out.println("✅ Telegram webhook контроллер успешно зарегистрирован в Spring контексте");
+                } catch (Exception e) {
+                    System.out.println("⚠️ Telegram webhook контроллер не найден в Spring контексте: " + e.getMessage());
+                }
 		
 		// Проверяем переменные окружения
 		String botEnabled = System.getenv("TELEGRAM_BOT_ENABLED");
