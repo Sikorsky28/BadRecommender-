@@ -80,6 +80,7 @@ public class TelegramWebhookController {
             }
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
+            String callbackQueryId = update.getCallbackQuery().getId();
             Long chatId = update.getCallbackQuery().getMessage().getChatId();
             String username = update.getCallbackQuery().getFrom().getUserName();
             String firstName = update.getCallbackQuery().getFrom().getFirstName();
@@ -88,7 +89,7 @@ public class TelegramWebhookController {
             logger.info("✅ Received callback query from {} ({}): {}", username, chatId, callbackData);
 
             try {
-                handleCallbackQuery(chatId, username, firstName, lastName, callbackData);
+                handleCallbackQuery(chatId, username, firstName, lastName, callbackData, callbackQueryId);
                 return ResponseEntity.ok("OK");
             } catch (Exception e) {
                 logger.error("Error handling callback query from {}: {}", chatId, e.getMessage(), e);
@@ -126,7 +127,7 @@ public class TelegramWebhookController {
         userService.updateUser(user);
     }
 
-    private void handleCallbackQuery(Long chatId, String username, String firstName, String lastName, String callbackData) {
+    private void handleCallbackQuery(Long chatId, String username, String firstName, String lastName, String callbackData, String callbackQueryId) {
         logger.info("Обработка callback query от {}: {}", username, callbackData);
 
         TelegramUser user = userService.getUser(chatId);
@@ -149,6 +150,9 @@ public class TelegramWebhookController {
         }
 
         userService.updateUser(user);
+        
+        // Отвечаем на callback query, чтобы убрать "часики" у кнопки
+        answerCallbackQuery(callbackQueryId);
     }
 
     private void handleStartCommand(TelegramUser user) {
@@ -329,6 +333,32 @@ public class TelegramWebhookController {
     }
 
 
+
+    private void answerCallbackQuery(String callbackData) {
+        try {
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/answerCallbackQuery";
+            String jsonBody = String.format(
+                "{\"callback_query_id\":\"%s\"}",
+                callbackData
+            );
+
+            logger.info("Отвечаем на callback query: {}", callbackData);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Ответ на callback query отправлен: {}", response),
+                        error -> logger.error("❌ Ошибка ответа на callback query: {}", error.getMessage())
+                    );
+
+        } catch (Exception e) {
+            logger.error("Error answering callback query: {}", e.getMessage(), e);
+        }
+    }
 
     private void sendMessage(Long chatId, String text) {
         try {
