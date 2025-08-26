@@ -114,9 +114,9 @@ public class TelegramWebhookController {
         user.resetSurvey();
         user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
 
-        String welcomeMessage = "👋 Привет! Я бот для проведения опроса о здоровье.\n\n" +
+        String welcomeMessage = "👋 *Привет! Я бот для проведения опроса о здоровье.*\n\n" +
                 "Ответьте на несколько вопросов — подберём, что вам подойдет.\n\n" +
-                "Начнем с выбора темы:";
+                "*Начнем с выбора темы:*";
 
         logger.info("Отправка приветственного сообщения пользователю {}", user.getUsername());
 
@@ -124,11 +124,11 @@ public class TelegramWebhookController {
     }
 
     private void handleHelpCommand(TelegramUser user) {
-        String helpMessage = "🤖 Доступные команды:\n\n" +
-                "/start - Начать опрос заново\n" +
-                "/help - Показать эту справку\n" +
-                "/reset - Сбросить текущий опрос\n\n" +
-                "Если у вас возникли проблемы, попробуйте команду /reset";
+        String helpMessage = "🤖 *Доступные команды:*\n\n" +
+                "• `/start` - Начать опрос заново\n" +
+                "• `/help` - Показать эту справку\n" +
+                "• `/reset` - Сбросить текущий опрос\n\n" +
+                "Если у вас возникли проблемы, попробуйте команду `/reset`";
 
         sendMessage(user.getChatId(), helpMessage);
     }
@@ -156,32 +156,48 @@ public class TelegramWebhookController {
         }
     }
 
+    private void handleCompletedSurvey(TelegramUser user, String message) {
+        if ("/start".equals(message) || "🔄 Начать заново".equals(message)) {
+            handleStartCommand(user);
+        } else if ("/help".equals(message) || "❓ Помощь".equals(message)) {
+            handleHelpCommand(user);
+        } else {
+            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте кнопки ниже для навигации.");
+        }
+    }
+
 
 
     private void handleSurveyAnswer(TelegramUser user, String answer) {
+        logger.info("Обработка ответа пользователя {}: '{}', текущий индекс={}", 
+                   user.getUsername(), answer, user.getCurrentQuestionIndex());
+        
         // Обрабатываем ответ через сервис опроса
         surveyService.processAnswer(user, answer);
         
+        logger.info("После обработки ответа: индекс={}, завершен={}", 
+                   user.getCurrentQuestionIndex(), surveyService.isSurveyCompleted(user));
+        
         // Проверяем, завершен ли опрос
         if (surveyService.isSurveyCompleted(user)) {
+            logger.info("Опрос завершен для пользователя {}, показываем рекомендации", user.getUsername());
             completeSurvey(user);
         } else {
             sendNextQuestion(user);
         }
     }
 
-    private void handleCompletedSurvey(TelegramUser user, String message) {
-        if ("/start".equals(message)) {
-            handleStartCommand(user);
-        } else {
-            sendMessage(user.getChatId(), "Опрос уже завершен. Используйте /start для нового опроса или /help для справки.");
-        }
-    }
+
 
     private void sendNextQuestion(TelegramUser user) {
         TelegramSurveyService.SurveyQuestion question = surveyService.getNextQuestion(user);
         
+        logger.info("Отправка вопроса для пользователя {}: текущий индекс={}, вопрос={}", 
+                   user.getUsername(), user.getCurrentQuestionIndex(), 
+                   question != null ? question.getText() : "null");
+        
         if (question == null) {
+            logger.info("Опрос завершен для пользователя {}, показываем рекомендации", user.getUsername());
             completeSurvey(user);
             return;
         }
@@ -190,7 +206,7 @@ public class TelegramWebhookController {
         int totalQuestions = selectedTopic != null ? surveyService.getTotalQuestionsForTopic(selectedTopic) : 1;
         int currentQuestion = user.getCurrentQuestionIndex() + 1;
         
-        String questionText = "Вопрос " + currentQuestion + " из " + totalQuestions + ":\n\n" + question.getText();
+        String questionText = "*Вопрос " + currentQuestion + " из " + totalQuestions + "*\n\n" + question.getText();
 
         ReplyKeyboardMarkup keyboard = createAnswerKeyboard(question.getOptions().toArray(new String[0]));
 
@@ -206,12 +222,12 @@ public class TelegramWebhookController {
             RecommendationCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
             StringBuilder message = new StringBuilder();
-            message.append("🎉 Опрос завершен!\n\n");
-            message.append("📋 Ваши персональные рекомендации:\n\n");
+            message.append("🎉 *Опрос завершен!*\n\n");
+            message.append("📋 *Ваши персональные рекомендации:*\n\n");
             
             // Основные рекомендации
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
-                message.append("🔹 Основные рекомендации:\n");
+                message.append("🔹 *Основные рекомендации:*\n");
                 for (int i = 0; i < Math.min(result.getMainRecommendations().size(), 3); i++) {
                     String supplementName = result.getMainRecommendations().get(i).getName();
                     message.append("• ").append(supplementName).append("\n");
@@ -221,7 +237,7 @@ public class TelegramWebhookController {
             
             // Дополнительные рекомендации
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
-                message.append("🔹 Дополнительные рекомендации:\n");
+                message.append("🔹 *Дополнительные рекомендации:*\n");
                 for (int i = 0; i < Math.min(result.getAdditionalRecommendations().size(), 2); i++) {
                     String supplementName = result.getAdditionalRecommendations().get(i).getName();
                     message.append("• ").append(supplementName).append("\n");
@@ -230,19 +246,21 @@ public class TelegramWebhookController {
             }
             
             message.append("💡 Для получения подробной информации и покупки БАДов, посетите наш сайт.\n\n");
-            message.append("Используйте /start для нового опроса или /help для справки.");
+            message.append("Используйте кнопки ниже для навигации:");
             
-            sendMessage(user.getChatId(), message.toString());
+            // Создаем клавиатуру с кнопками навигации
+            ReplyKeyboardMarkup keyboard = createNavigationKeyboard();
+            sendMessageWithKeyboard(user.getChatId(), message.toString(), keyboard);
             
         } catch (Exception e) {
             logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
             
-            String completionMessage = "🎉 Опрос завершен!\n\n" +
+            String completionMessage = "🎉 *Опрос завершен!*\n\n" +
                     "Спасибо за ваши ответы. Мы обрабатываем результаты и подбираем персональные рекомендации.\n\n" +
-                    "Для получения результатов на email, отправьте ваш email адрес.\n\n" +
-                    "Используйте /start для нового опроса или /help для справки.";
-
-            sendMessage(user.getChatId(), completionMessage);
+                    "Используйте кнопки ниже для навигации:";
+            
+            ReplyKeyboardMarkup keyboard = createNavigationKeyboard();
+            sendMessageWithKeyboard(user.getChatId(), completionMessage, keyboard);
         }
     }
 
@@ -281,6 +299,32 @@ public class TelegramWebhookController {
                 keyboardRows.add(row);
             }
         }
+
+        keyboard.setKeyboard(keyboardRows);
+        return keyboard;
+    }
+
+    private ReplyKeyboardMarkup createNavigationKeyboard() {
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true);
+        keyboard.setOneTimeKeyboard(false);
+        keyboard.setSelective(true);
+
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        
+        // Первый ряд: Начать заново
+        KeyboardRow row1 = new KeyboardRow();
+        KeyboardButton startButton = new KeyboardButton();
+        startButton.setText("🔄 Начать заново");
+        row1.add(startButton);
+        keyboardRows.add(row1);
+        
+        // Второй ряд: Помощь
+        KeyboardRow row2 = new KeyboardRow();
+        KeyboardButton helpButton = new KeyboardButton();
+        helpButton.setText("❓ Помощь");
+        row2.add(helpButton);
+        keyboardRows.add(row2);
 
         keyboard.setKeyboard(keyboardRows);
         return keyboard;
