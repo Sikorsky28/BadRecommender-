@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -259,14 +260,18 @@ public class TelegramWebhookController {
         if (options.length > 10) {
             for (String option : options) {
                 KeyboardRow row = new KeyboardRow();
-                row.add(option);
+                KeyboardButton button = new KeyboardButton();
+                button.setText(option);
+                row.add(button);
                 keyboardRows.add(row);
             }
         } else {
             // Для обычных вопросов - размещаем по 2 кнопки в ряду
             KeyboardRow row = new KeyboardRow();
             for (String option : options) {
-                row.add(option);
+                KeyboardButton button = new KeyboardButton();
+                button.setText(option);
+                row.add(button);
                 if (row.size() == 2) {
                     keyboardRows.add(row);
                     row = new KeyboardRow();
@@ -324,7 +329,11 @@ public class TelegramWebhookController {
             for (KeyboardRow row : rows) {
                 List<String> buttonRow = new ArrayList<>();
                 for (Object button : row) {
-                    buttonRow.add(button.toString());
+                    if (button instanceof KeyboardButton) {
+                        buttonRow.add(((KeyboardButton) button).getText());
+                    } else {
+                        buttonRow.add(button.toString());
+                    }
                 }
                 keyboardButtons.add(buttonRow);
             }
