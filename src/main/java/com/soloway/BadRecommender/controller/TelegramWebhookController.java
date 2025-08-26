@@ -14,6 +14,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -76,6 +78,22 @@ public class TelegramWebhookController {
                 logger.error("Error handling webhook message from {}: {}", chatId, e.getMessage(), e);
                 return ResponseEntity.ok("Error handled");
             }
+        } else if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            Long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String username = update.getCallbackQuery().getFrom().getUserName();
+            String firstName = update.getCallbackQuery().getFrom().getFirstName();
+            String lastName = update.getCallbackQuery().getFrom().getLastName();
+
+            logger.info("✅ Received callback query from {} ({}): {}", username, chatId, callbackData);
+
+            try {
+                handleCallbackQuery(chatId, username, firstName, lastName, callbackData);
+                return ResponseEntity.ok("OK");
+            } catch (Exception e) {
+                logger.error("Error handling callback query from {}: {}", chatId, e.getMessage(), e);
+                return ResponseEntity.ok("Error handled");
+            }
         } else {
             logger.debug("Получено webhook обновление без текстового сообщения: {}", update);
         }
@@ -103,6 +121,31 @@ public class TelegramWebhookController {
         } else {
             logger.info("Обработка обычного сообщения от {}: {}", username, messageText);
             handleRegularMessage(user, messageText);
+        }
+
+        userService.updateUser(user);
+    }
+
+    private void handleCallbackQuery(Long chatId, String username, String firstName, String lastName, String callbackData) {
+        logger.info("Обработка callback query от {}: {}", username, callbackData);
+
+        TelegramUser user = userService.getUser(chatId);
+        user.setUsername(username);
+        user.setFirstName(firstName);
+        user.setLastName(lastName);
+
+        // Обрабатываем ответ через сервис опроса
+        surveyService.processAnswer(user, callbackData);
+        
+        logger.info("После обработки callback: индекс={}, завершен={}", 
+                   user.getCurrentQuestionIndex(), surveyService.isSurveyCompleted(user));
+        
+        // Проверяем, завершен ли опрос
+        if (surveyService.isSurveyCompleted(user)) {
+            logger.info("Опрос завершен для пользователя {}, показываем рекомендации", user.getUsername());
+            completeSurvey(user);
+        } else {
+            sendNextQuestion(user);
         }
 
         userService.updateUser(user);
@@ -201,9 +244,9 @@ public class TelegramWebhookController {
         
         String questionText = "Вопрос " + currentQuestion + " из " + totalQuestions + ":\n\n" + question.getText();
 
-        ReplyKeyboardMarkup keyboard = createAnswerKeyboard(question.getOptions().toArray(new String[0]));
+        InlineKeyboardMarkup keyboard = createInlineAnswerKeyboard(question.getOptions().toArray(new String[0]));
 
-        sendMessageWithKeyboard(user.getChatId(), questionText, keyboard);
+        sendMessageWithInlineKeyboard(user.getChatId(), questionText, keyboard);
     }
 
     private void completeSurvey(TelegramUser user) {
@@ -232,6 +275,42 @@ public class TelegramWebhookController {
     }
 
 
+
+    private InlineKeyboardMarkup createInlineAnswerKeyboard(String... options) {
+        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        
+        // Для вопросов с выбором темы - размещаем по 1 кнопке в ряду
+        if (options.length > 10) {
+            for (String option : options) {
+                List<InlineKeyboardButton> row = new ArrayList<>();
+                InlineKeyboardButton button = new InlineKeyboardButton();
+                button.setText(option);
+                button.setCallbackData(option);
+                row.add(button);
+                keyboardRows.add(row);
+            }
+        } else {
+            // Для обычных вопросов - размещаем по 3 кнопки в ряду (как на скриншоте)
+            List<InlineKeyboardButton> row = new ArrayList<>();
+            for (String option : options) {
+                InlineKeyboardButton button = new InlineKeyboardButton();
+                button.setText(option);
+                button.setCallbackData(option);
+                row.add(button);
+                if (row.size() == 3) {
+                    keyboardRows.add(row);
+                    row = new ArrayList<>();
+                }
+            }
+            if (!row.isEmpty()) {
+                keyboardRows.add(row);
+            }
+        }
+
+        keyboard.setKeyboard(keyboardRows);
+        return keyboard;
+    }
 
     private ReplyKeyboardMarkup createAnswerKeyboard(String... options) {
         ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
@@ -322,6 +401,66 @@ public class TelegramWebhookController {
 
         } catch (Exception e) {
             logger.error("Error sending message to {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+
+    private void sendMessageWithInlineKeyboard(Long chatId, String text, InlineKeyboardMarkup keyboard) {
+        try {
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendMessage";
+            
+            // Создаем JSON для inline клавиатуры
+            StringBuilder keyboardJson = new StringBuilder();
+            keyboardJson.append("\"reply_markup\":{");
+            keyboardJson.append("\"inline_keyboard\":[");
+            
+            List<List<InlineKeyboardButton>> keyboardButtons = keyboard.getKeyboard();
+            
+            // Добавляем кнопки в JSON
+            for (int i = 0; i < keyboardButtons.size(); i++) {
+                keyboardJson.append("[");
+                List<InlineKeyboardButton> row = keyboardButtons.get(i);
+                for (int j = 0; j < row.size(); j++) {
+                    InlineKeyboardButton button = row.get(j);
+                    keyboardJson.append("{");
+                    keyboardJson.append("\"text\":\"").append(button.getText().replace("\"", "\\\"")).append("\",");
+                    keyboardJson.append("\"callback_data\":\"").append(button.getCallbackData().replace("\"", "\\\"")).append("\"");
+                    keyboardJson.append("}");
+                    if (j < row.size() - 1) {
+                        keyboardJson.append(",");
+                    }
+                }
+                keyboardJson.append("]");
+                if (i < keyboardButtons.size() - 1) {
+                    keyboardJson.append(",");
+                }
+            }
+            
+            keyboardJson.append("]}");
+            
+            String jsonBody = String.format(
+                "{\"chat_id\":\"%s\",\"text\":\"%s\",\"parse_mode\":\"Markdown\",%s}",
+                chatId, 
+                text.replace("\"", "\\\"").replace("\n", "\\n"),
+                keyboardJson.toString()
+            );
+
+            logger.info("Отправка сообщения с inline клавиатурой в чат {}: {}", chatId, text);
+            logger.info("URL: {}", url);
+            logger.info("JSON: {}", jsonBody);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response),
+                        error -> logger.error("❌ Ошибка отправки сообщения с inline клавиатурой в чат {}: {}", chatId, error.getMessage())
+                    );
+
+        } catch (Exception e) {
+            logger.error("Error sending message with inline keyboard to {}: {}", chatId, e.getMessage(), e);
         }
     }
 
