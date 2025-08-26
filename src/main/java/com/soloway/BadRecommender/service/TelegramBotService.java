@@ -13,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -39,20 +40,36 @@ public class TelegramBotService extends TelegramLongPollingBot {
         this.userService = userService;
         this.recommendationService = recommendationService;
         this.emailService = emailService;
+        
+        logger.info("TelegramBotService создан");
+    }
+
+    @PostConstruct
+    public void init() {
+        logger.info("Инициализация Telegram бота...");
+        logger.info("Bot enabled: {}", botConfig.isBotEnabled());
+        logger.info("Bot token: {}", botConfig.getBotToken() != null ? "***" : "null");
+        logger.info("Bot username: {}", botConfig.getBotUsername());
     }
 
     @Override
     public String getBotToken() {
-        return botConfig.getBotToken();
+        String token = botConfig.getBotToken();
+        logger.debug("Получен токен бота: {}", token != null ? "***" : "null");
+        return token;
     }
 
     @Override
     public String getBotUsername() {
-        return botConfig.getBotUsername();
+        String username = botConfig.getBotUsername();
+        logger.debug("Получен username бота: {}", username);
+        return username;
     }
 
     @Override
     public void onUpdateReceived(Update update) {
+        logger.info("Получено обновление: {}", update);
+        
         if (!botConfig.isBotEnabled()) {
             logger.warn("Telegram bot is disabled");
             return;
@@ -73,22 +90,30 @@ public class TelegramBotService extends TelegramLongPollingBot {
                 logger.error("Error handling message from {}: {}", chatId, e.getMessage(), e);
                 sendMessage(chatId, "Произошла ошибка. Попробуйте позже или начните заново с команды /start");
             }
+        } else {
+            logger.debug("Получено обновление без текстового сообщения: {}", update);
         }
     }
 
     private void handleMessage(Long chatId, String username, String firstName, String lastName, String messageText) {
+        logger.info("Обработка сообщения от {}: {}", username, messageText);
+        
         TelegramUser user = userService.getUser(chatId);
         user.setUsername(username);
         user.setFirstName(firstName);
         user.setLastName(lastName);
 
         if ("/start".equals(messageText)) {
+            logger.info("Обработка команды /start для пользователя {}", username);
             handleStartCommand(user);
         } else if ("/help".equals(messageText)) {
+            logger.info("Обработка команды /help для пользователя {}", username);
             handleHelpCommand(user);
         } else if ("/reset".equals(messageText)) {
+            logger.info("Обработка команды /reset для пользователя {}", username);
             handleResetCommand(user);
         } else {
+            logger.info("Обработка обычного сообщения от {}: {}", username, messageText);
             handleRegularMessage(user, messageText);
         }
 
@@ -96,6 +121,8 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private void handleStartCommand(TelegramUser user) {
+        logger.info("Выполнение команды /start для пользователя {}", user.getUsername());
+        
         user.resetSurvey();
         user.setState(TelegramUser.UserState.WAITING_FOR_EMAIL);
         
@@ -103,6 +130,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
                 "Для начала мне нужен ваш email адрес, чтобы отправить результаты опроса.\n\n" +
                 "Пожалуйста, отправьте ваш email:";
         
+        logger.info("Отправка приветственного сообщения пользователю {}", user.getUsername());
         sendMessage(user.getChatId(), welcomeMessage);
     }
 
@@ -236,6 +264,8 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private void sendMessage(Long chatId, String text) {
+        logger.info("Отправка сообщения в чат {}: {}", chatId, text);
+        
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
@@ -243,12 +273,15 @@ public class TelegramBotService extends TelegramLongPollingBot {
         
         try {
             execute(message);
+            logger.info("Сообщение успешно отправлено в чат {}", chatId);
         } catch (TelegramApiException e) {
             logger.error("Error sending message to {}: {}", chatId, e.getMessage(), e);
         }
     }
 
     private void sendMessageWithKeyboard(Long chatId, String text, ReplyKeyboardMarkup keyboard) {
+        logger.info("Отправка сообщения с клавиатурой в чат {}: {}", chatId, text);
+        
         SendMessage message = new SendMessage();
         message.setChatId(chatId.toString());
         message.setText(text);
@@ -257,6 +290,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
         
         try {
             execute(message);
+            logger.info("Сообщение с клавиатурой успешно отправлено в чат {}", chatId);
         } catch (TelegramApiException e) {
             logger.error("Error sending message with keyboard to {}: {}", chatId, e.getMessage(), e);
         }

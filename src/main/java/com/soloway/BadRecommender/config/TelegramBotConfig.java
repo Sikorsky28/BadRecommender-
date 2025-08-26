@@ -1,7 +1,9 @@
 package com.soloway.BadRecommender.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import com.soloway.BadRecommender.service.TelegramBotService;
 
 /**
  * Конфигурация для Telegram бота
@@ -40,5 +42,15 @@ public class TelegramBotConfig {
 
     public void setBotEnabled(boolean botEnabled) {
         this.botEnabled = botEnabled;
+    }
+
+    @Bean
+    public TelegramBotService telegramBotService() {
+        if (!botEnabled || botToken == null || botToken.isEmpty()) {
+            System.out.println("⚠️ TELEGRAM_BOT_TOKEN не установлен - Telegram бот не будет работать");
+            return null;
+        }
+        System.out.println("✅ Telegram бот инициализирован: " + botUsername);
+        return new TelegramBotService(this, null, null, null);
     }
 }
