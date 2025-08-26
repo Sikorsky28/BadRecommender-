@@ -13,10 +13,9 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Сервис Telegram бота для проведения опросов
@@ -186,12 +185,10 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private void handleSurveyAnswer(TelegramUser user, String answer) {
-        // Здесь будет логика обработки ответов на вопросы
-        // Пока что просто переходим к следующему вопросу
         user.addAnswer(user.getCurrentQuestionIndex(), answer);
         user.nextQuestion();
         
-        if (user.getCurrentQuestionIndex() >= 15) { // Предполагаем 15 вопросов
+        if (user.getCurrentQuestionIndex() >= 15) {
             completeSurvey(user);
         } else {
             sendNextQuestion(user);
@@ -207,8 +204,6 @@ public class TelegramBotService extends TelegramLongPollingBot {
     }
 
     private void sendNextQuestion(TelegramUser user) {
-        // Здесь будет логика отправки вопросов
-        // Пока что отправляем заглушку
         String questionText = "Вопрос " + (user.getCurrentQuestionIndex() + 1) + " из 15:\n\n" +
                 "Как вы оцениваете свое общее самочувствие?";
         
@@ -229,9 +224,6 @@ public class TelegramBotService extends TelegramLongPollingBot {
                 "Используйте /start для нового опроса или /help для справки.";
         
         sendMessage(user.getChatId(), completionMessage);
-        
-        // Здесь можно добавить логику отправки результатов на email
-        // sendResultsToEmail(user);
     }
 
     private boolean isValidEmail(String email) {
@@ -249,7 +241,7 @@ public class TelegramBotService extends TelegramLongPollingBot {
         
         for (String option : options) {
             row.add(option);
-            if (row.size() == 2) { // 2 кнопки в ряду
+            if (row.size() == 2) {
                 keyboardRows.add(row);
                 row = new KeyboardRow();
             }
@@ -293,21 +285,6 @@ public class TelegramBotService extends TelegramLongPollingBot {
             logger.info("Сообщение с клавиатурой успешно отправлено в чат {}", chatId);
         } catch (TelegramApiException e) {
             logger.error("Error sending message with keyboard to {}: {}", chatId, e.getMessage(), e);
-        }
-    }
-
-    public void sendResultsToEmail(TelegramUser user) {
-        try {
-            // Здесь будет логика формирования и отправки результатов
-            String subject = "Результаты опроса о здоровье";
-            String body = "Спасибо за участие в опросе! Ваши результаты обрабатываются.";
-            
-            emailService.sendEmail(user.getEmail(), subject, body);
-            
-            sendMessage(user.getChatId(), "📧 Результаты отправлены на ваш email!");
-        } catch (Exception e) {
-            logger.error("Error sending results to email for user {}: {}", user.getChatId(), e.getMessage(), e);
-            sendMessage(user.getChatId(), "❌ Ошибка при отправке результатов на email. Попробуйте позже.");
         }
     }
 }
