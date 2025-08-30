@@ -29,6 +29,11 @@ public class TelegramSurveyService {
     // Кэш для тем (загружаем динамически)
     private List<String> cachedTopics = null;
     private long topicsCacheTime = 0;
+    
+    // Кэш для вопросов по темам
+    private Map<String, List<Question>> cachedQuestions = new HashMap<>();
+    private Map<String, Long> questionsCacheTime = new HashMap<>();
+    
     private static final long CACHE_TTL = 300000; // 5 минут
 
     public TelegramSurveyService(QuestionRepository questionRepository, RecommendationService recommendationService, GoogleSheetsDataService googleSheetsDataService) {
@@ -92,28 +97,54 @@ public class TelegramSurveyService {
     }
 
     /**
+     * Загрузить вопросы для темы с кэшированием
+     */
+    private List<Question> loadQuestionsForTopic(String topic) {
+        long currentTime = System.currentTimeMillis();
+        
+        // Проверяем кэш
+        if (cachedQuestions.containsKey(topic)) {
+            Long cacheTime = questionsCacheTime.get(topic);
+            if (cacheTime != null && (currentTime - cacheTime) < CACHE_TTL) {
+                logger.debug("Вопросы для темы '{}' загружены из кэша", topic);
+                return cachedQuestions.get(topic);
+            }
+        }
+        
+        try {
+            // Загружаем вопросы из Google Sheets
+            List<Question> questions = recommendationService.getQuestionsByTopic(topic);
+            cachedQuestions.put(topic, questions);
+            questionsCacheTime.put(topic, currentTime);
+            logger.info("Загружено {} вопросов для темы '{}' из Google Sheets", questions.size(), topic);
+            return questions;
+        } catch (IOException e) {
+            logger.error("Ошибка загрузки вопросов для темы '{}': {}", topic, e.getMessage());
+            // Возвращаем кэшированные вопросы или пустой список
+            return cachedQuestions.getOrDefault(topic, new ArrayList<>());
+        }
+    }
+
+    /**
      * Получить конкретный динамический вопрос по индексу
      */
     private SurveyQuestion getDynamicQuestionByIndex(TelegramUser user, int questionIndex) {
         String selectedTopic = user.getSelectedTopic();
-        try {
-            List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
-            
-            if (questionIndex >= topicQuestions.size()) {
-                return null; // Опрос завершен
-            }
-            
-            Question question = topicQuestions.get(questionIndex);
-            return SurveyQuestion.builder()
-                .text(question.getText())
-                .options(question.getOptions())
-                .questionType(QuestionType.DYNAMIC)
-                .questionId(question.getId())
-                .build();
-        } catch (IOException e) {
-            logger.error("Ошибка получения вопросов для темы {}: {}", selectedTopic, e.getMessage());
-            return null;
+        
+        // Загружаем вопросы с кэшированием
+        List<Question> topicQuestions = loadQuestionsForTopic(selectedTopic);
+        
+        if (questionIndex >= topicQuestions.size()) {
+            return null; // Опрос завершен
         }
+        
+        Question question = topicQuestions.get(questionIndex);
+        return SurveyQuestion.builder()
+            .text(question.getText())
+            .options(question.getOptions())
+            .questionType(QuestionType.DYNAMIC)
+            .questionId(question.getId())
+            .build();
     }
 
     /**
@@ -154,28 +185,18 @@ public class TelegramSurveyService {
             return false;
         }
         
-        try {
-            List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
-            int totalQuestions = 1 + topicQuestions.size(); // 1 для выбора темы + вопросы по теме
-            
-            return user.getCurrentQuestionIndex() >= totalQuestions;
-        } catch (IOException e) {
-            logger.error("Ошибка проверки завершения опроса для темы {}: {}", selectedTopic, e.getMessage());
-            return false;
-        }
+        List<Question> topicQuestions = loadQuestionsForTopic(selectedTopic);
+        int totalQuestions = 1 + topicQuestions.size(); // 1 для выбора темы + вопросы по теме
+        
+        return user.getCurrentQuestionIndex() >= totalQuestions;
     }
 
     /**
      * Получить общее количество вопросов для темы
      */
     public int getTotalQuestionsForTopic(String topic) {
-        try {
-            List<Question> questions = recommendationService.getQuestionsByTopic(topic);
-            return 1 + questions.size(); // 1 для выбора темы + вопросы по теме
-        } catch (IOException e) {
-            logger.error("Ошибка получения вопросов для темы {}: {}", topic, e.getMessage());
-            return 1; // Возвращаем только вопрос о выборе темы
-        }
+        List<Question> questions = loadQuestionsForTopic(topic);
+        return 1 + questions.size(); // 1 для выбора темы + вопросы по теме
     }
 
     /**
@@ -188,7 +209,7 @@ public class TelegramSurveyService {
         try {
             // Преобразуем ответы пользователя в формат UserAnswer
             Map<Integer, String> answers = user.getAnswers();
-            List<Question> questions = recommendationService.getQuestionsByTopic(selectedTopic);
+            List<Question> questions = loadQuestionsForTopic(selectedTopic);
             
             for (int i = 0; i < questions.size(); i++) {
                 String answer = answers.get(i);
