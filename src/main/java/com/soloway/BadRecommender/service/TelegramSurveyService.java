@@ -4,11 +4,13 @@ import com.soloway.BadRecommender.model.Question;
 import com.soloway.BadRecommender.model.TelegramUser;
 import com.soloway.BadRecommender.model.UserAnswer;
 import com.soloway.BadRecommender.repository.QuestionRepository;
+import com.soloway.BadRecommender.service.ScoreCalculationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.io.IOException;
 
 /**
  * Сервис для управления опросом в Telegram боте
@@ -82,19 +84,24 @@ public class TelegramSurveyService {
      */
     private SurveyQuestion getDynamicQuestionByIndex(TelegramUser user, int questionIndex) {
         String selectedTopic = user.getSelectedTopic();
-        List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
-        
-        if (questionIndex >= topicQuestions.size()) {
-            return null; // Опрос завершен
+        try {
+            List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
+            
+            if (questionIndex >= topicQuestions.size()) {
+                return null; // Опрос завершен
+            }
+            
+            Question question = topicQuestions.get(questionIndex);
+            return SurveyQuestion.builder()
+                .text(question.getText())
+                .options(question.getOptions())
+                .questionType(QuestionType.DYNAMIC)
+                .questionId(question.getId())
+                .build();
+        } catch (IOException e) {
+            logger.error("Ошибка получения вопросов для темы {}: {}", selectedTopic, e.getMessage());
+            return null;
         }
-        
-        Question question = topicQuestions.get(questionIndex);
-        return SurveyQuestion.builder()
-            .text(question.getText())
-            .options(question.getOptions())
-            .questionType(QuestionType.DYNAMIC)
-            .questionId(question.getId())
-            .build();
     }
 
     /**
@@ -138,43 +145,62 @@ public class TelegramSurveyService {
             return false;
         }
         
-        List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
-        int totalQuestions = 1 + topicQuestions.size(); // 1 для выбора темы + вопросы по теме
-        
-        return user.getCurrentQuestionIndex() >= totalQuestions;
+        try {
+            List<Question> topicQuestions = recommendationService.getQuestionsByTopic(selectedTopic);
+            int totalQuestions = 1 + topicQuestions.size(); // 1 для выбора темы + вопросы по теме
+            
+            return user.getCurrentQuestionIndex() >= totalQuestions;
+        } catch (IOException e) {
+            logger.error("Ошибка проверки завершения опроса для темы {}: {}", selectedTopic, e.getMessage());
+            return false;
+        }
     }
 
     /**
      * Получить общее количество вопросов для темы
      */
     public int getTotalQuestionsForTopic(String topic) {
-        List<Question> questions = recommendationService.getQuestionsByTopic(topic);
-        return 1 + questions.size(); // 1 для выбора темы + вопросы по теме
+        try {
+            List<Question> questions = recommendationService.getQuestionsByTopic(topic);
+            return 1 + questions.size(); // 1 для выбора темы + вопросы по теме
+        } catch (IOException e) {
+            logger.error("Ошибка получения вопросов для темы {}: {}", topic, e.getMessage());
+            return 1; // Возвращаем только вопрос о выборе темы
+        }
     }
 
     /**
      * Получить рекомендации на основе ответов пользователя
      */
-    public RecommendationCalculationService.RecommendationResult getRecommendations(TelegramUser user) {
+    public ScoreCalculationService.RecommendationResult getRecommendations(TelegramUser user) {
         String selectedTopic = user.getSelectedTopic();
         List<UserAnswer> userAnswers = new ArrayList<>();
         
-        // Преобразуем ответы пользователя в формат UserAnswer
-        Map<Integer, String> answers = user.getAnswers();
-        List<Question> questions = recommendationService.getQuestionsByTopic(selectedTopic);
-        
-        for (int i = 0; i < questions.size(); i++) {
-            String answer = answers.get(i);
-            if (answer != null) {
-                Question question = questions.get(i);
-                UserAnswer userAnswer = new UserAnswer();
-                userAnswer.setQuestionId(question.getId());
-                userAnswer.setAnswer(answer);
-                userAnswers.add(userAnswer);
+        try {
+            // Преобразуем ответы пользователя в формат UserAnswer
+            Map<Integer, String> answers = user.getAnswers();
+            List<Question> questions = recommendationService.getQuestionsByTopic(selectedTopic);
+            
+            for (int i = 0; i < questions.size(); i++) {
+                String answer = answers.get(i);
+                if (answer != null) {
+                    Question question = questions.get(i);
+                    UserAnswer userAnswer = new UserAnswer();
+                    userAnswer.setQuestionId(question.getId());
+                    userAnswer.setAnswer(answer);
+                    userAnswers.add(userAnswer);
+                }
             }
+            
+            return recommendationService.generateAdvancedRecommendations(userAnswers, selectedTopic);
+        } catch (IOException e) {
+            logger.error("Ошибка получения рекомендаций для темы {}: {}", selectedTopic, e.getMessage());
+            // Возвращаем пустой результат при ошибке
+            return new ScoreCalculationService.RecommendationResult(
+                new ArrayList<>(), 
+                new ArrayList<>()
+            );
         }
-        
-        return recommendationService.generateAdvancedRecommendations(userAnswers, selectedTopic);
     }
 
     /**

@@ -5,15 +5,17 @@ import com.soloway.BadRecommender.model.Question;
 import com.soloway.BadRecommender.model.Supplement;
 
 import com.soloway.BadRecommender.service.RecommendationService;
-import com.soloway.BadRecommender.service.RecommendationCalculationService;
+import com.soloway.BadRecommender.service.ScoreCalculationService;
 import com.soloway.BadRecommender.service.GoogleSheetsService;
+import com.soloway.BadRecommender.service.GoogleSheetsDataService;
 import com.soloway.BadRecommender.service.EmailService;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 
 import java.util.List;
-
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/recommendation")
@@ -22,18 +24,26 @@ public class RecommendationController {
 
   private final RecommendationService recommendationService;
       private final GoogleSheetsService googleSheetsService;
+  private final GoogleSheetsDataService googleSheetsDataService;
   private final EmailService emailService;
 
-      public RecommendationController(RecommendationService recommendationService, GoogleSheetsService googleSheetsService, EmailService emailService) {
+      public RecommendationController(RecommendationService recommendationService, GoogleSheetsService googleSheetsService, GoogleSheetsDataService googleSheetsDataService, EmailService emailService) {
         this.recommendationService = recommendationService;
         this.googleSheetsService = googleSheetsService;
+        this.googleSheetsDataService = googleSheetsDataService;
         this.emailService = emailService;
     }
 
   // 🔹 Получить все доступные темы здоровья
   @GetMapping("/topics")
   public List<String> getAvailableTopics() {
-    return recommendationService.getAvailableTopics();
+    try {
+      return recommendationService.getAvailableTopics();
+    } catch (IOException e) {
+      System.err.println("❌ Ошибка получения тем: " + e.getMessage());
+      // Возвращаем пустой список при ошибке
+      return new ArrayList<>();
+    }
   }
 
   // 🔹 Получить вопросы по выбранной теме
@@ -42,15 +52,20 @@ public class RecommendationController {
     System.out.println("🔍 Запрос вопросов по теме:");
     System.out.println("   Тема: " + topics);
     
-    List<Question> questions = recommendationService.getQuestionsByTopic(topics);
-    System.out.println("   Найдено вопросов: " + questions.size());
-    
-    return questions;
+    try {
+      List<Question> questions = recommendationService.getQuestionsByTopic(topics);
+      System.out.println("   Найдено вопросов: " + questions.size());
+      return questions;
+    } catch (IOException e) {
+      System.err.println("❌ Ошибка получения вопросов: " + e.getMessage());
+      // Возвращаем пустой список при ошибке
+      return new ArrayList<>();
+    }
   }
 
   // 🔹 Основной эндпоинт для получения рекомендаций
   @PostMapping("/submit")
-  public RecommendationCalculationService.RecommendationResult submitAnswers(
+  public ScoreCalculationService.RecommendationResult submitAnswers(
       @RequestBody RecommendationRequest request) {
     
     System.out.println("🎯 Запрос рекомендаций:");
@@ -61,8 +76,17 @@ public class RecommendationController {
     System.out.println("   Согласие на обработку ПД: " + request.isConsentPd());
     System.out.println("   Согласие на маркетинг: " + request.isConsentMarketing());
     
-    RecommendationCalculationService.RecommendationResult result = 
-        recommendationService.generateAdvancedRecommendations(request.getAnswers(), request.getSelectedTopic());
+    ScoreCalculationService.RecommendationResult result;
+    try {
+        result = recommendationService.generateAdvancedRecommendations(request.getAnswers(), request.getSelectedTopic());
+    } catch (IOException e) {
+        System.err.println("❌ Ошибка генерации рекомендаций: " + e.getMessage());
+        // Возвращаем пустой результат при ошибке
+        result = new ScoreCalculationService.RecommendationResult(
+            new ArrayList<>(), 
+            new ArrayList<>()
+        );
+    }
     
     System.out.println("   Основных рекомендаций: " + result.getMainRecommendations().size());
     System.out.println("   Дополнительных рекомендаций: " + result.getAdditionalRecommendations().size());
@@ -73,12 +97,16 @@ public class RecommendationController {
             // Получаем имя пользователя из запроса
             String userName = request.getUserName() != null ? request.getUserName() : "Пользователь";
             
+            // Конвертируем SupplementWithScore в Supplement для EmailService
+            List<Supplement> mainSupplements = convertToSupplements(result.getMainRecommendations());
+            List<Supplement> additionalSupplements = convertToSupplements(result.getAdditionalRecommendations());
+            
             emailService.sendRecommendationsEmail(
                 request.getEmail(),
                 userName,
                 request.getSelectedTopic(),
-                result.getMainRecommendations(),
-                result.getAdditionalRecommendations()
+                mainSupplements,
+                additionalSupplements
             );
             
             System.out.println("📧 Email с рекомендациями отправлен на: " + request.getEmail());
@@ -95,7 +123,7 @@ public class RecommendationController {
 
   // 🔹 Тестовый эндпоинт для демонстрации работы системы
   @GetMapping("/demo")
-  public RecommendationCalculationService.RecommendationResult getDemoRecommendations() {
+  public ScoreCalculationService.RecommendationResult getDemoRecommendations() throws IOException {
     System.out.println("🧪 Демонстрационный запрос рекомендаций");
     
     // Создаем тестовые данные
@@ -132,7 +160,7 @@ public class RecommendationController {
     answer6.setAnswer("часто");
     answers.add(answer6);
     
-    RecommendationCalculationService.RecommendationResult result = 
+    ScoreCalculationService.RecommendationResult result = 
         recommendationService.generateAdvancedRecommendations(answers, selectedTopic);
     
     System.out.println("   Основных рекомендаций: " + result.getMainRecommendations().size());
@@ -166,6 +194,73 @@ public class RecommendationController {
     }
   }
 
+  // 🔹 Тестовый эндпоинт для проверки правил AnswerScores
+  @GetMapping("/test-answer-scores")
+  public List<Object> testAnswerScores() {
+    System.out.println("🧪 Тестируем правила AnswerScores");
+    
+    try {
+      List<GoogleSheetsDataService.AnswerScore> answerScores = googleSheetsDataService.loadAnswerScores();
+      System.out.println("📊 Найдено правил: " + answerScores.size());
+      
+      List<Object> result = new ArrayList<>();
+      for (GoogleSheetsDataService.AnswerScore score : answerScores) {
+        Map<String, Object> rule = new HashMap<>();
+        rule.put("questionId", score.getQuestionId());
+        rule.put("answer", score.getAnswer());
+        rule.put("supplementCode", score.getSupplementCode());
+        rule.put("score", score.getScore());
+        rule.put("description", score.getDescription());
+        result.add(rule);
+      }
+      
+      return result;
+    } catch (IOException e) {
+      System.err.println("❌ Ошибка загрузки AnswerScores: " + e.getMessage());
+      e.printStackTrace();
+      return new ArrayList<>();
+    }
+  }
+
+  // 🔹 Тестовый эндпоинт для диагностики Google Sheets
+  @GetMapping("/test-sheets-diagnostic")
+  public Map<String, Object> testSheetsDiagnostic() {
+    System.out.println("🔍 Диагностика Google Sheets");
+    
+    Map<String, Object> diagnostic = new HashMap<>();
+    
+    try {
+      // Проверяем лист AnswerScores
+      List<GoogleSheetsDataService.AnswerScore> answerScores = googleSheetsDataService.loadAnswerScores();
+      diagnostic.put("answerScoresCount", answerScores.size());
+      diagnostic.put("answerScoresLoaded", !answerScores.isEmpty());
+      
+      // Проверяем лист BaseScores
+      List<GoogleSheetsDataService.BaseScore> baseScores = googleSheetsDataService.loadBaseScores();
+      diagnostic.put("baseScoresCount", baseScores.size());
+      diagnostic.put("baseScoresLoaded", !baseScores.isEmpty());
+      
+      // Проверяем лист Categories
+      List<String> categories = googleSheetsDataService.loadCategories();
+      diagnostic.put("categoriesCount", categories.size());
+      diagnostic.put("categoriesLoaded", !categories.isEmpty());
+      
+      // Проверяем лист Questions
+      List<GoogleSheetsDataService.Question> questions = googleSheetsDataService.loadQuestions();
+      diagnostic.put("questionsCount", questions.size());
+      diagnostic.put("questionsLoaded", !questions.isEmpty());
+      
+      diagnostic.put("status", "success");
+      
+    } catch (Exception e) {
+      diagnostic.put("status", "error");
+      diagnostic.put("error", e.getMessage());
+      e.printStackTrace();
+    }
+    
+    return diagnostic;
+  }
+
   // 🔹 Класс для запроса рекомендаций
   public static class RecommendationRequest {
     private String selectedTopic;
@@ -192,5 +287,26 @@ public class RecommendationController {
 
     public String getUserName() { return userName; }
     public void setUserName(String userName) { this.userName = userName; }
+  }
+
+  /**
+   * Конвертирует SupplementWithScore в Supplement для EmailService
+   */
+  private List<Supplement> convertToSupplements(List<ScoreCalculationService.SupplementWithScore> supplementWithScores) {
+    List<Supplement> supplements = new ArrayList<>();
+    
+    try {
+      // Для каждого SupplementWithScore извлекаем Supplement
+      for (ScoreCalculationService.SupplementWithScore supplementWithScore : supplementWithScores) {
+        Supplement supplement = supplementWithScore.getSupplement();
+        if (supplement != null) {
+          supplements.add(supplement);
+        }
+      }
+    } catch (Exception e) {
+      System.err.println("❌ Ошибка конвертации SupplementWithScore в Supplement: " + e.getMessage());
+    }
+    
+    return supplements;
   }
 }

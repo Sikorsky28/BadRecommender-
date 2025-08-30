@@ -3,9 +3,10 @@ package com.soloway.BadRecommender.controller;
 import com.soloway.BadRecommender.config.TelegramBotConfig;
 import com.soloway.BadRecommender.model.TelegramUser;
 import com.soloway.BadRecommender.model.Supplement;
+import com.soloway.BadRecommender.model.SupplementScore;
 import com.soloway.BadRecommender.service.TelegramUserService;
 import com.soloway.BadRecommender.service.TelegramSurveyService;
-import com.soloway.BadRecommender.service.RecommendationCalculationService;
+import com.soloway.BadRecommender.service.ScoreCalculationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -280,7 +281,7 @@ public class TelegramWebhookController {
 
         // Получаем рекомендации
         try {
-            RecommendationCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
+            ScoreCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
             StringBuilder message = new StringBuilder();
             message.append("*🎯 Ваши персональные рекомендации:*\n\n");
@@ -289,12 +290,10 @@ public class TelegramWebhookController {
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
                 message.append("*🏆 Основные рекомендации:*\n");
                 for (int i = 0; i < result.getMainRecommendations().size(); i++) {
-                    Supplement supplement = result.getMainRecommendations().get(i);
+                    ScoreCalculationService.SupplementWithScore supplementWithScore = result.getMainRecommendations().get(i);
+                    Supplement supplement = supplementWithScore.getSupplement();
                     message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
-                    message.append("   ").append(supplement.getDescription()).append("\n");
-                    if (supplement.getProductUrl() != null && !supplement.getProductUrl().isEmpty()) {
-                        message.append("   [🛒 Купить](").append(supplement.getProductUrl()).append(")\n");
-                    }
+                    message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
                     message.append("\n");
                 }
             }
@@ -303,12 +302,10 @@ public class TelegramWebhookController {
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
                 message.append("*💡 Дополнительные рекомендации:*\n");
                 for (int i = 0; i < result.getAdditionalRecommendations().size(); i++) {
-                    Supplement supplement = result.getAdditionalRecommendations().get(i);
+                    ScoreCalculationService.SupplementWithScore supplementWithScore = result.getAdditionalRecommendations().get(i);
+                    Supplement supplement = supplementWithScore.getSupplement();
                     message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
-                    message.append("   ").append(supplement.getDescription()).append("\n");
-                    if (supplement.getProductUrl() != null && !supplement.getProductUrl().isEmpty()) {
-                        message.append("   [🛒 Купить](").append(supplement.getProductUrl()).append(")\n");
-                    }
+                    message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
                     message.append("\n");
                 }
             }
