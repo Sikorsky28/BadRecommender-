@@ -5,6 +5,7 @@ import com.soloway.BadRecommender.model.TelegramUser;
 import com.soloway.BadRecommender.model.UserAnswer;
 import com.soloway.BadRecommender.repository.QuestionRepository;
 import com.soloway.BadRecommender.service.ScoreCalculationService;
+import com.soloway.BadRecommender.service.GoogleSheetsDataService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -23,31 +24,17 @@ public class TelegramSurveyService {
 
     private final QuestionRepository questionRepository;
     private final RecommendationService recommendationService;
+    private final GoogleSheetsDataService googleSheetsDataService;
 
-    // Темы опроса
-    private static final Map<String, String> TOPICS = createTopicsMap();
+    // Кэш для тем (загружаем динамически)
+    private List<String> cachedTopics = null;
+    private long topicsCacheTime = 0;
+    private static final long CACHE_TTL = 300000; // 5 минут
 
-    private static Map<String, String> createTopicsMap() {
-        Map<String, String> topics = new HashMap<>();
-        topics.put("energy", "Бодрость и энергия");
-        topics.put("sleep", "Крепкий сон, меньше стресса");
-        topics.put("weight", "Контроль веса и аппетита");
-        topics.put("skin", "Чистая кожа, крепкие волосы");
-        topics.put("digestion", "Комфорт пищеварения");
-        topics.put("joints", "Подвижные суставы, крепкие кости");
-        topics.put("immunity", "Сильный иммунитет");
-        topics.put("heart", "Здоровое сердце и сосуды");
-        topics.put("thyroid", "Поддержка щитовидной железы");
-        topics.put("female", "Регулярный цикл, мягкий ПМС");
-        topics.put("menopause", "Менопауза без приливов");
-        topics.put("male", "Мужское здоровье");
-        topics.put("iron", "Поднять гемоглобин");
-        return topics;
-    }
-
-    public TelegramSurveyService(QuestionRepository questionRepository, RecommendationService recommendationService) {
+    public TelegramSurveyService(QuestionRepository questionRepository, RecommendationService recommendationService, GoogleSheetsDataService googleSheetsDataService) {
         this.questionRepository = questionRepository;
         this.recommendationService = recommendationService;
+        this.googleSheetsDataService = googleSheetsDataService;
     }
 
     /**
@@ -66,15 +53,40 @@ public class TelegramSurveyService {
     }
 
     /**
+     * Загрузить темы из Google Sheets с кэшированием
+     */
+    private List<String> loadTopics() {
+        long currentTime = System.currentTimeMillis();
+        
+        // Проверяем кэш
+        if (cachedTopics != null && (currentTime - topicsCacheTime) < CACHE_TTL) {
+            return cachedTopics;
+        }
+        
+        try {
+            // Загружаем темы из Google Sheets
+            List<String> topics = googleSheetsDataService.loadCategories();
+            cachedTopics = topics;
+            topicsCacheTime = currentTime;
+            logger.info("Загружено {} тем из Google Sheets", topics.size());
+            return topics;
+        } catch (IOException e) {
+            logger.error("Ошибка загрузки тем из Google Sheets: {}", e.getMessage());
+            // Возвращаем кэшированные темы или пустой список
+            return cachedTopics != null ? cachedTopics : new ArrayList<>();
+        }
+    }
+
+    /**
      * Вопрос о выборе темы
      */
     private SurveyQuestion getTopicQuestion(TelegramUser user) {
-        List<String> options = new ArrayList<>(TOPICS.values());
+        List<String> topics = loadTopics();
         
         return SurveyQuestion.builder()
             .text("Здравствуйте, " + (user.getFirstName() != null ? user.getFirstName() : "пользователь") + 
                   ", выберите интересующую вас тему:")
-            .options(options)
+            .options(topics)
             .questionType(QuestionType.TOPIC_SELECTION)
             .build();
     }
@@ -128,12 +140,9 @@ public class TelegramSurveyService {
      * Получить тему по ответу пользователя
      */
     private String getTopicByAnswer(String answer) {
-        for (Map.Entry<String, String> entry : TOPICS.entrySet()) {
-            if (entry.getValue().equals(answer)) {
-                return entry.getKey();
-            }
-        }
-        return "energy"; // По умолчанию
+        // Теперь тема - это просто название из Google Sheets
+        // Возвращаем название темы как есть
+        return answer;
     }
 
     /**
