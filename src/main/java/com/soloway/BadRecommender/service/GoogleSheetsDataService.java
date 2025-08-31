@@ -193,40 +193,63 @@ public class GoogleSheetsDataService {
      */
     public List<BaseScore> loadBaseScores() throws IOException {
         System.out.println("📊 Загружаем базовые баллы из Google Sheets...");
+        System.out.println("🔍 Используем лист: " + BASE_SCORES_SHEET);
+        System.out.println("🔍 Диапазон: " + BASE_SCORES_SHEET + "!A2:D");
         
         try {
             ValueRange range = sheetsService.spreadsheets().values()
                 .get(spreadsheetId, BASE_SCORES_SHEET + "!A2:D")
                 .execute();
             
+            System.out.println("🔍 Получен ответ от Google Sheets");
+            
             List<BaseScore> baseScores = new ArrayList<>();
             
             if (range.getValues() != null) {
-                for (List<Object> row : range.getValues()) {
-                    if (row.size() >= 4) {
+                System.out.println("🔍 Найдено строк в ответе: " + range.getValues().size());
+                
+                for (int i = 0; i < range.getValues().size(); i++) {
+                    List<Object> row = range.getValues().get(i);
+                    System.out.println("🔍 Обрабатываем строку " + (i + 1) + ": " + row);
+                    
+                    if (row.size() >= 3) { // Минимум 3 колонки: код добавки, тема, баллы
                         try {
                             BaseScore baseScore = new BaseScore();
-                            baseScore.setSupplementCode(row.get(0) != null ? row.get(0).toString() : "");
-                            baseScore.setTopic(row.get(1) != null ? row.get(1).toString() : "");
+                            String supplementCode = row.get(0) != null ? row.get(0).toString().trim() : ""; // Колонка A: Код добавки
+                            String topic = row.get(1) != null ? row.get(1).toString().trim() : "";           // Колонка B: Название темы
+                            
+                            System.out.println("🔍 Парсим: код='" + supplementCode + "', тема='" + topic + "'");
                             
                             // Парсим базовые баллы
                             if (row.get(2) != null) {
                                 try {
-                                    double score = Double.parseDouble(row.get(2).toString());
+                                    double score = Double.parseDouble(row.get(2).toString().trim());
                                     baseScore.setBaseScore(score);
+                                    System.out.println("🔍 Базовые баллы: " + score);
                                 } catch (NumberFormatException e) {
                                     baseScore.setBaseScore(0.0);
+                                    System.out.println("⚠️ Не удалось распарсить баллы, устанавливаем 0");
                                 }
                             }
                             
-                            baseScore.setDescription(row.get(3) != null ? row.get(3).toString() : "");
+                            // Описание может отсутствовать
+                            baseScore.setDescription(row.size() >= 4 && row.get(3) != null ? row.get(3).toString().trim() : "");
+                            
+                            baseScore.setTopic(topic);
+                            baseScore.setSupplementCode(supplementCode);
                             
                             baseScores.add(baseScore);
+                            System.out.println("✅ Добавлен базовый балл: " + topic + " -> " + supplementCode + " = " + baseScore.getBaseScore());
                         } catch (Exception e) {
-                            System.err.println("❌ Ошибка парсинга базового балла: " + e.getMessage());
+                            System.err.println("❌ Ошибка парсинга базового балла в строке " + (i + 1) + ": " + e.getMessage());
+                            e.printStackTrace();
                         }
+                    } else {
+                        System.out.println("⚠️ Строка " + (i + 1) + " имеет недостаточно колонок: " + row.size());
                     }
                 }
+            } else {
+                System.out.println("⚠️ Ответ от Google Sheets пустой");
             }
             
             System.out.println("✅ Загружено базовых баллов: " + baseScores.size());
@@ -234,6 +257,7 @@ public class GoogleSheetsDataService {
             
         } catch (Exception e) {
             System.err.println("❌ Ошибка загрузки базовых баллов: " + e.getMessage());
+            e.printStackTrace();
             throw e;
         }
     }

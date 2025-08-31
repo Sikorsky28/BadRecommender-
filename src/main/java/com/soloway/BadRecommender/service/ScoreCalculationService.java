@@ -38,8 +38,14 @@ public class ScoreCalculationService {
         System.out.println("📊 Загружено правил начисления баллов: " + answerScores.size());
         
         // Загружаем базовые баллы для выбранной темы
+        System.out.println("🏆 Начинаем загрузку базовых баллов...");
         List<GoogleSheetsDataService.BaseScore> baseScores = googleSheetsDataService.loadBaseScores();
         System.out.println("🏆 Загружено базовых баллов: " + baseScores.size());
+        
+        // Выводим все загруженные базовые баллы для отладки
+        for (GoogleSheetsDataService.BaseScore bs : baseScores) {
+            System.out.println("🏆 Базовый балл: тема='" + bs.getTopic() + "', добавка='" + bs.getSupplementCode() + "', баллы=" + bs.getBaseScore());
+        }
         
         // Инициализируем баллы для всех добавок с базовыми баллами
         Map<String, SupplementScore> supplementScores = new HashMap<>();
