@@ -567,6 +567,23 @@
             cursor: pointer;
         }
 
+        .policy-link {
+            color: var(--primary-green);
+            text-decoration: none;
+            font-weight: 600;
+            border-bottom: 1px solid var(--primary-green);
+            transition: all 0.3s ease;
+        }
+
+        .policy-link:hover {
+            color: var(--secondary-green);
+            border-bottom-color: var(--secondary-green);
+        }
+
+        .policy-link:active {
+            transform: scale(0.98);
+        }
+
         /* Стили для вопросов */
         .question-card {
             background: var(--warm-white);
@@ -1169,15 +1186,15 @@
                     </div>
                     <div class="consent-group">
                         <div class="consent-item">
-                            <input type="checkbox" id="consentPd" class="consent-checkbox" required>
+                            <input type="checkbox" id="consentPd" class="consent-checkbox" required checked>
                             <label for="consentPd" class="consent-text">
-                                Я подтверждаю ознакомление и даю Согласие на обработку моих персональных данных в порядке и на условиях, указанных в Политике обработки персональных данных.
+                                Я подтверждаю ознакомление и даю <a href="https://soloways.ru/personaldata" target="_blank" class="policy-link">Согласие на обработку моих персональных данных</a> в порядке и на условиях, указанных в <a href="https://soloways.ru/policy" target="_blank" class="policy-link">Политике обработки персональных данных</a>.
                             </label>
                         </div>
                         <div class="consent-item">
-                            <input type="checkbox" id="consentMarketing" class="consent-checkbox">
+                            <input type="checkbox" id="consentMarketing" class="consent-checkbox" checked>
                             <label for="consentMarketing" class="consent-text">
-                                Я даю согласие на получение рекламной информации о поступлении новых товаров, скидках, распродажах посредством электронной почты.
+                                Подписаться на новости и рассылки
                             </label>
                         </div>
                     </div>
@@ -2041,6 +2058,22 @@
         function showEmailScreen() {
             document.getElementById('question-container').classList.add('hidden');
             document.getElementById('email-screen').classList.remove('hidden');
+            
+            // Инициализируем галочки как отмеченные
+            setTimeout(() => {
+                const consentPdCheckbox = document.getElementById('consentPd');
+                const consentMarketingCheckbox = document.getElementById('consentMarketing');
+                
+                if (consentPdCheckbox) {
+                    consentPdCheckbox.checked = true;
+                    userConsentPd = true;
+                }
+                
+                if (consentMarketingCheckbox) {
+                    consentMarketingCheckbox.checked = true;
+                    userConsentMarketing = true;
+                }
+            }, 100);
         }
 
         // Пропустить ввод email
