@@ -141,6 +141,15 @@ public class TelegramWebhookController {
         
         logger.info("Пользователь получен: {}, текущий индекс вопроса: {}", user.getUsername(), user.getCurrentQuestionIndex());
 
+        // Проверяем специальные callback'и
+        if ("NEW_SURVEY".equals(callbackData)) {
+            logger.info("Пользователь {} нажал кнопку 'Новый опрос'", user.getUsername());
+            handleStartCommand(user);
+            userService.updateUser(user);
+            answerCallbackQuery(callbackQueryId);
+            return;
+        }
+
         // Обрабатываем ответ через сервис опроса
         logger.info("Вызываем surveyService.processAnswer с ответом: {}", callbackData);
         surveyService.processAnswer(user, callbackData);
@@ -170,11 +179,24 @@ public class TelegramWebhookController {
     private void handleStartCommand(TelegramUser user) {
         logger.info("Выполнение команды /start для пользователя {}", user.getUsername());
 
+        // Полностью сбрасываем состояние пользователя
         user.resetSurvey();
         user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
+        user.setSurveyCompleted(false);
+        user.setCurrentQuestionIndex(0);
+        user.setSelectedTopic(null);
+        user.setUserAnswers(new ArrayList<>());
 
-        logger.info("Отправка приветственного сообщения пользователю {}", user.getUsername());
+        logger.info("Состояние пользователя {} сброшено: {}", user.getUsername(), user.getState());
 
+        // Отправляем приветственное сообщение
+        String welcomeMessage = "🎯 *Добро пожаловать в систему персональных рекомендаций БАДов!*\n\n" +
+                "Я помогу подобрать добавки специально для вас.\n" +
+                "Давайте начнем с выбора темы здоровья.";
+
+        sendMessage(user.getChatId(), welcomeMessage);
+
+        // Отправляем первый вопрос
         sendNextQuestion(user);
     }
 
@@ -189,9 +211,25 @@ public class TelegramWebhookController {
     }
 
     private void handleResetCommand(TelegramUser user) {
+        logger.info("Выполнение команды /reset для пользователя {}", user.getUsername());
+
+        // Полностью сбрасываем состояние пользователя
         user.resetSurvey();
         user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
+        user.setSurveyCompleted(false);
+        user.setCurrentQuestionIndex(0);
+        user.setSelectedTopic(null);
+        user.setUserAnswers(new ArrayList<>());
 
+        logger.info("Состояние пользователя {} сброшено командой /reset: {}", user.getUsername(), user.getState());
+
+        // Отправляем сообщение о сбросе
+        String resetMessage = "🔄 *Опрос сброшен!*\n\n" +
+                "Давайте начнем заново с выбора темы здоровья.";
+
+        sendMessage(user.getChatId(), resetMessage);
+
+        // Отправляем первый вопрос
         sendNextQuestion(user);
     }
 
@@ -311,9 +349,22 @@ public class TelegramWebhookController {
             }
             
             message.append("💡 *Совет:* Проконсультируйтесь с врачом перед приемом любых добавок.\n\n");
-            message.append("🔄 Хотите пройти опрос заново? Отправьте /start");
+            message.append("🔄 Хотите пройти опрос заново?");
             
-            sendMessage(user.getChatId(), message.toString());
+            // Создаем клавиатуру с кнопкой для нового опроса
+            InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+            
+            List<InlineKeyboardButton> row = new ArrayList<>();
+            InlineKeyboardButton startButton = new InlineKeyboardButton();
+            startButton.setText("🔄 Начать новый опрос");
+            startButton.setCallbackData("NEW_SURVEY");
+            row.add(startButton);
+            keyboardRows.add(row);
+            
+            keyboard.setKeyboard(keyboardRows);
+            
+            sendMessageWithKeyboard(user.getChatId(), message.toString(), keyboard);
             
         } catch (Exception e) {
             logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
@@ -578,6 +629,68 @@ public class TelegramWebhookController {
 
         } catch (Exception e) {
             logger.error("Error sending message with keyboard to {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+
+    private void sendMessageWithKeyboard(Long chatId, String text, InlineKeyboardMarkup keyboard) {
+        try {
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendMessage";
+            
+            // Создаем JSON для inline клавиатуры
+            StringBuilder keyboardJson = new StringBuilder();
+            keyboardJson.append("\"reply_markup\":{");
+            keyboardJson.append("\"inline_keyboard\":[");
+            
+            List<List<InlineKeyboardButton>> rows = keyboard.getKeyboard();
+            
+            for (int i = 0; i < rows.size(); i++) {
+                List<InlineKeyboardButton> row = rows.get(i);
+                keyboardJson.append("[");
+                
+                for (int j = 0; j < row.size(); j++) {
+                    InlineKeyboardButton button = row.get(j);
+                    keyboardJson.append("{");
+                    keyboardJson.append("\"text\":\"").append(button.getText().replace("\"", "\\\"")).append("\",");
+                    keyboardJson.append("\"callback_data\":\"").append(button.getCallbackData().replace("\"", "\\\"")).append("\"");
+                    keyboardJson.append("}");
+                    
+                    if (j < row.size() - 1) {
+                        keyboardJson.append(",");
+                    }
+                }
+                
+                keyboardJson.append("]");
+                if (i < rows.size() - 1) {
+                    keyboardJson.append(",");
+                }
+            }
+            
+            keyboardJson.append("]}");
+            
+            String jsonBody = String.format(
+                "{\"chat_id\":\"%s\",\"text\":\"%s\",\"parse_mode\":\"Markdown\",%s}",
+                chatId, 
+                text.replace("\"", "\\\"").replace("\n", "\\n"),
+                keyboardJson.toString()
+            );
+
+            logger.info("Отправка сообщения с inline клавиатурой в чат {}: {}", chatId, text);
+            logger.info("URL: {}", url);
+            logger.info("JSON: {}", jsonBody);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response),
+                        error -> logger.error("❌ Ошибка отправки сообщения с inline клавиатурой в чат {}: {}", chatId, error.getMessage())
+                    );
+
+        } catch (Exception e) {
+            logger.error("Error sending message with inline keyboard to {}: {}", chatId, e.getMessage(), e);
         }
     }
 }
