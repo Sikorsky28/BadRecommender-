@@ -498,6 +498,54 @@
             font-size: 0.9em;
         }
 
+        .recommendation-description {
+            color: #2A5F4E;
+            font-size: 1.1em;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #FFFFFF;
+            border-radius: 8px;
+        }
+
+        .genetics-section {
+            text-align: center;
+            background: linear-gradient(135deg, #F5E8C7 0%, #E8D5B7 100%);
+            border: 2px solid #F4A261;
+        }
+
+        .genetics-section h3 {
+            color: #2A5F4E;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+        }
+
+        .genetics-section p {
+            color: #2A5F4E;
+            font-size: 1.1em;
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+
+        .btn-genetics {
+            background: linear-gradient(135deg, #F4A261 0%, #E76F51 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-weight: 600;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(244, 162, 97, 0.3);
+        }
+
+        .btn-genetics:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(244, 162, 97, 0.4);
+            background: linear-gradient(135deg, #E76F51 0%, #F4A261 100%);
+        }
+
         /* Алерты */
         .alert {
             padding: 15px;
@@ -1003,7 +1051,6 @@
             font-weight: 400;
             font-style: normal;
             letter-spacing: 0%;
-            text-transform: uppercase;
         }
 
         .product-price {
@@ -1217,12 +1264,20 @@
                 <div id="results-content" class="hidden">
                     <div class="question-card">
                         <h3>Основные рекомендации:</h3>
+                        <p class="recommendation-description">Совместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца</p>
                         <div id="main-recommendations" class="recommendations-grid"></div>
                     </div>
                     
                     <div class="question-card">
                         <h3>Дополнительные рекомендации:</h3>
+                        <p class="recommendation-description">Эти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца</p>
                         <div id="additional-recommendations" class="recommendations-grid"></div>
+                    </div>
+                    
+                    <div class="question-card genetics-section">
+                        <h3>Хотите ещё точнее?</h3>
+                        <p>GenAIS™ проверит риски по генам и обновит схему</p>
+                        <button class="btn btn-genetics" onclick="openGenetics()">Хочу точнее</button>
                     </div>
                 </div>
 
@@ -1846,6 +1901,11 @@
             return urls[name] || "https://soloways.ru";
         }
 
+        // Открыть страницу генетики
+        function openGenetics() {
+            window.open('https://soloways.tilda.ws/pers_bad', '_blank');
+        }
+
         // Отобразить рекомендации
         function displayRecommendations(result) {
                 console.log('🎯 Начинаем отображение рекомендаций');
@@ -1894,9 +1954,9 @@
                         <div class="card-badge">NEW</div>
                         <img src="${imageUrl}" alt="${supplementName}" class="product-image" onerror="this.src='/images/default-supplement.jpg'">
                         <div class="product-content">
-                            <h3 class="product-title">${supplementName.toUpperCase()}</h3>
+                            <h3 class="product-title">${supplementName}</h3>
                             <p class="product-description">
-                                ${description.split('.')[0].toUpperCase()}
+                                ${description.split('.')[0]}
                             </p>
                             <div class="product-price">${price}</div>
                         <button class="details-btn" onclick="goToProduct('${productUrl}', '${supplementName}')">ПОДРОБНЕЕ</button>
@@ -1946,9 +2006,9 @@
                         <div class="card-badge">NEW</div>
                         <img src="${imageUrl}" alt="${supplementName}" class="product-image" onerror="this.src='/images/default-supplement.jpg'">
                         <div class="product-content">
-                            <h3 class="product-title">${supplementName.toUpperCase()}</h3>
+                            <h3 class="product-title">${supplementName}</h3>
                             <p class="product-description">
-                                ${description.split('.')[0].toUpperCase()}
+                                ${description.split('.')[0]}
                             </p>
                             <div class="product-price">${price}</div>
                         <button class="details-btn" onclick="goToProduct('${productUrl}', '${supplementName}')">ПОДРОБНЕЕ</button>

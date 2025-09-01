@@ -151,6 +151,14 @@ public class TelegramWebhookController {
             answerCallbackQuery(callbackQueryId);
             return;
         }
+        
+        if ("GENETICS".equals(callbackData)) {
+            logger.info("Пользователь {} нажал кнопку 'Генетика'", user.getUsername());
+            handleGeneticsCommand(user);
+            userService.updateUser(user);
+            answerCallbackQuery(callbackQueryId);
+            return;
+        }
 
         // Обрабатываем ответ через сервис опроса
         logger.info("Вызываем surveyService.processAnswer с ответом: {}", callbackData);
@@ -233,6 +241,21 @@ public class TelegramWebhookController {
 
         // Отправляем первый вопрос
         sendNextQuestion(user);
+    }
+
+    private void handleGeneticsCommand(TelegramUser user) {
+        logger.info("Пользователь {} заинтересовался генетическим тестированием", user.getUsername());
+
+        String geneticsMessage = "🧬 *GenAIS™ — Персональная генетика для точных рекомендаций*\n\n" +
+                "Наша система анализирует ваши гены и создает индивидуальную схему приема БАДов:\n\n" +
+                "• 🔍 Проверяет риски по генам\n" +
+                "• 📊 Анализирует метаболизм\n" +
+                "• 💊 Подбирает оптимальные дозировки\n" +
+                "• ⚠️ Выявляет противопоказания\n\n" +
+                "Получите максимально точные рекомендации на основе вашей ДНК!\n\n" +
+                "🌐 Переходите на сайт: https://soloways.tilda.ws/pers_bad";
+
+        sendMessage(user.getChatId(), geneticsMessage);
     }
 
     private void handleRegularMessage(TelegramUser user, String messageText) {
@@ -329,10 +352,11 @@ public class TelegramWebhookController {
             // Основные рекомендации
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
                 message.append("*🏆 Основные рекомендации:*\n");
+                message.append("Совместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца\n\n");
                 for (int i = 0; i < result.getMainRecommendations().size(); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getMainRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
-                    message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
+                    message.append(i + 1).append(". ").append(supplement.getName()).append("\n");
                     message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
                     message.append("\n");
                 }
@@ -341,28 +365,39 @@ public class TelegramWebhookController {
             // Дополнительные рекомендации
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
                 message.append("*💡 Дополнительные рекомендации:*\n");
+                message.append("Эти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца\n\n");
                 for (int i = 0; i < result.getAdditionalRecommendations().size(); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getAdditionalRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
-                    message.append(i + 1).append(". *").append(supplement.getName()).append("*\n");
+                    message.append(i + 1).append(". ").append(supplement.getName()).append("\n");
                     message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
                     message.append("\n");
                 }
             }
             
             message.append("💡 *Совет:* Проконсультируйтесь с врачом перед приемом любых добавок.\n\n");
-            message.append("🔄 Хотите пройти опрос заново?");
+            message.append("🔄 Хотите пройти опрос заново?\n\n");
+            message.append("Хотите ещё точнее? GenAIS™ проверит риски по генам и обновит схему");
             
-            // Создаем клавиатуру с кнопкой для нового опроса
+            // Создаем клавиатуру с кнопками
             InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
             
-            List<InlineKeyboardButton> row = new ArrayList<>();
+            // Первый ряд: кнопка нового опроса
+            List<InlineKeyboardButton> row1 = new ArrayList<>();
             InlineKeyboardButton startButton = new InlineKeyboardButton();
             startButton.setText("🔄 Начать новый опрос");
             startButton.setCallbackData("NEW_SURVEY");
-            row.add(startButton);
-            keyboardRows.add(row);
+            row1.add(startButton);
+            keyboardRows.add(row1);
+            
+            // Второй ряд: кнопка генетики
+            List<InlineKeyboardButton> row2 = new ArrayList<>();
+            InlineKeyboardButton geneticsButton = new InlineKeyboardButton();
+            geneticsButton.setText("🧬 Хочу точнее");
+            geneticsButton.setCallbackData("GENETICS");
+            row2.add(geneticsButton);
+            keyboardRows.add(row2);
             
             keyboard.setKeyboard(keyboardRows);
             
