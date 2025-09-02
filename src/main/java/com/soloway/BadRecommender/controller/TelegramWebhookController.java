@@ -200,11 +200,14 @@ public class TelegramWebhookController {
         logger.info("Состояние пользователя {} сброшено: {}", user.getUsername(), user.getState());
 
         // Отправляем приветственное сообщение
-        String welcomeMessage = "🎯 *Добро пожаловать в систему персональных рекомендаций БАДов!*\n\n" +
-                "Я помогу подобрать добавки специально для вас.\n" +
-                "Давайте начнем с выбора темы здоровья.";
+        String welcomeMessage = String.format("Здравствуйте, %s! Ответьте на несколько вопросов — подберём, что вам подойдет", 
+                user.getFirstName() != null ? user.getFirstName() : "друг");
 
         sendMessage(user.getChatId(), welcomeMessage);
+        
+        // Отправляем изображение start.jpg
+        String imagePath = "src/main/resources/images/start.jpg";
+        sendPhoto(user.getChatId(), imagePath, "Начнем подбор БАДов для вас!");
 
         // Отправляем первый вопрос
         sendNextQuestion(user);
@@ -522,6 +525,34 @@ public class TelegramWebhookController {
 
         } catch (Exception e) {
             logger.error("Error sending message to {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+
+    private void sendPhoto(Long chatId, String imagePath, String caption) {
+        try {
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendPhoto";
+            String jsonBody = String.format(
+                "{\"chat_id\":\"%s\",\"photo\":\"%s\",\"caption\":\"%s\"}",
+                chatId, imagePath, caption.replace("\"", "\\\"")
+            );
+
+            logger.info("Отправка фотографии в чат {}: {}", chatId, caption);
+            logger.info("URL: {}", url);
+            logger.info("JSON: {}", jsonBody);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Фотография отправлена в чат {}: {}", chatId, response),
+                        error -> logger.error("❌ Ошибка отправки фотографии в чат {}: {}", chatId, error.getMessage())
+                    );
+
+        } catch (Exception e) {
+            logger.error("Error sending photo to {}: {}", chatId, e.getMessage(), e);
         }
     }
 
