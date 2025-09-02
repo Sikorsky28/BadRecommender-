@@ -206,7 +206,7 @@ public class TelegramWebhookController {
         sendMessage(user.getChatId(), welcomeMessage);
         
         // Отправляем изображение start.jpg
-        String imagePath = "src/main/resources/images/start.jpg";
+        String imagePath = "https://i.ibb.co/67WZjKj6/start.jpg";
         sendPhoto(user.getChatId(), imagePath, "Начнем подбор БАДов для вас!");
 
         // Отправляем первый вопрос
@@ -531,6 +531,7 @@ public class TelegramWebhookController {
     private void sendPhoto(Long chatId, String imagePath, String caption) {
         try {
             String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendPhoto";
+            
             String jsonBody = String.format(
                 "{\"chat_id\":\"%s\",\"photo\":\"%s\",\"caption\":\"%s\"}",
                 chatId, imagePath, caption.replace("\"", "\\\"")
@@ -555,6 +556,8 @@ public class TelegramWebhookController {
             logger.error("Error sending photo to {}: {}", chatId, e.getMessage(), e);
         }
     }
+    
+
 
     private void sendMessageWithInlineKeyboard(Long chatId, String text, InlineKeyboardMarkup keyboard) {
         try {
