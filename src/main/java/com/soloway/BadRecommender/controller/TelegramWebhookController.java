@@ -351,15 +351,25 @@ public class TelegramWebhookController {
         try {
             ScoreCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
+            logger.info("Получены рекомендации для пользователя {}: основные={}, дополнительные={}", 
+                user.getUsername(),
+                result.getMainRecommendations() != null ? result.getMainRecommendations().size() : 0,
+                result.getAdditionalRecommendations() != null ? result.getAdditionalRecommendations().size() : 0
+            );
+            
             // 1. Отправляем заголовок основных рекомендаций
             String mainRecommendationsHeader = "*Основные рекомендации*\nСовместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца";
             sendMessage(user.getChatId(), mainRecommendationsHeader);
             
             // 2. Отправляем альбом из 3 фото основных БАДов
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
+                logger.info("Отправляем {} основных рекомендаций", result.getMainRecommendations().size());
                 for (int i = 0; i < Math.min(3, result.getMainRecommendations().size()); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getMainRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
+                    
+                    logger.info("Обрабатываем основную рекомендацию {}: {}", i, supplement.getName());
+                    logger.info("ImageUrl: {}, ProductUrl: {}", supplement.getImageUrl(), supplement.getProductUrl());
                     
                     // Формируем подпись с Markdown
                     String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
@@ -371,13 +381,17 @@ public class TelegramWebhookController {
                     // Отправляем фото с inline кнопкой "Подробнее"
                     String buttonUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
                     if (supplement.getImageUrl() != null && !supplement.getImageUrl().isEmpty()) {
+                        logger.info("Отправляем фото для {}", supplement.getName());
                         sendPhotoWithInlineButton(user.getChatId(), supplement.getImageUrl(), caption, "Подробнее", buttonUrl);
                     } else {
+                        logger.info("Отправляем текст без фото для {}", supplement.getName());
                         // Если нет фото, отправляем только текст с кнопкой
                         sendMessageWithInlineKeyboard(user.getChatId(), caption, 
                             createInlineButtonKeyboard("Подробнее", buttonUrl));
                     }
                 }
+            } else {
+                logger.info("Основные рекомендации отсутствуют");
             }
             
             // 3. Отправляем заголовок дополнительных рекомендаций
@@ -386,9 +400,13 @@ public class TelegramWebhookController {
             
             // 4. Отправляем альбом из 2 фото дополнительных БАДов
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
+                logger.info("Отправляем {} дополнительных рекомендаций", result.getAdditionalRecommendations().size());
                 for (int i = 0; i < Math.min(2, result.getAdditionalRecommendations().size()); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getAdditionalRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
+                    
+                    logger.info("Обрабатываем дополнительную рекомендацию {}: {}", i, supplement.getName());
+                    logger.info("ImageUrl: {}, ProductUrl: {}", supplement.getImageUrl(), supplement.getProductUrl());
                     
                     // Формируем подпись с Markdown
                     String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
@@ -400,13 +418,17 @@ public class TelegramWebhookController {
                     // Отправляем фото с inline кнопкой "Подробнее"
                     String buttonUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
                     if (supplement.getImageUrl() != null && !supplement.getImageUrl().isEmpty()) {
+                        logger.info("Отправляем фото для {}", supplement.getName());
                         sendPhotoWithInlineButton(user.getChatId(), supplement.getImageUrl(), caption, "Подробнее", buttonUrl);
                     } else {
+                        logger.info("Отправляем текст без фото для {}", supplement.getName());
                         // Если нет фото, отправляем только текст с кнопкой
                         sendMessageWithInlineKeyboard(user.getChatId(), caption, 
                             createInlineButtonKeyboard("Подробнее", buttonUrl));
                     }
                 }
+            } else {
+                logger.info("Дополнительные рекомендации отсутствуют");
             }
             
             // 5. Отправляем финальное сообщение с кнопками
