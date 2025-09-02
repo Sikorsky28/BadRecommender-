@@ -361,13 +361,6 @@ public class TelegramWebhookController {
             String mainRecommendationsHeader = "*Основные рекомендации*\nСовместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца";
             sendMessage(user.getChatId(), mainRecommendationsHeader);
             
-            // Небольшая задержка для правильного порядка сообщений
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            
             // 2. Отправляем альбом из 3 фото основных БАДов
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
                 logger.info("Отправляем {} основных рекомендаций", result.getMainRecommendations().size());
@@ -404,13 +397,6 @@ public class TelegramWebhookController {
             // 3. Отправляем заголовок дополнительных рекомендаций
             String additionalRecommendationsHeader = "*Дополнительные рекомендации*\nЭти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца";
             sendMessage(user.getChatId(), additionalRecommendationsHeader);
-            
-            // Небольшая задержка для правильного порядка сообщений
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
             
             // 4. Отправляем альбом из 2 фото дополнительных БАДов
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
@@ -567,16 +553,19 @@ public class TelegramWebhookController {
 
             logger.info("Отвечаем на callback query: {}", callbackData);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> logger.info("✅ Ответ на callback query отправлен: {}", response),
-                        error -> logger.error("❌ Ошибка ответа на callback query: {}", error.getMessage())
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Ответ на callback query отправлен: {}", response);
+            } else {
+                logger.error("❌ Получен пустой ответ при ответе на callback query");
+            }
 
         } catch (Exception e) {
             logger.error("Error answering callback query: {}", e.getMessage(), e);
@@ -595,16 +584,19 @@ public class TelegramWebhookController {
             logger.info("URL: {}", url);
             logger.info("JSON: {}", jsonBody);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> logger.info("✅ Сообщение отправлено в чат {}: {}", chatId, response),
-                        error -> logger.error("❌ Ошибка отправки сообщения в чат {}: {}", chatId, error.getMessage())
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Сообщение отправлено в чат {}: {}", chatId, response);
+            } else {
+                logger.error("❌ Получен пустой ответ при отправке сообщения в чат {}", chatId);
+            }
 
         } catch (Exception e) {
             logger.error("Error sending message to {}: {}", chatId, e.getMessage(), e);
@@ -624,16 +616,19 @@ public class TelegramWebhookController {
             logger.info("URL: {}", url);
             logger.info("JSON: {}", jsonBody);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> logger.info("✅ Фотография отправлена в чат {}: {}", chatId, response),
-                        error -> logger.error("❌ Ошибка отправки фотографии в чат {}: {}", chatId, error.getMessage())
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Фотография отправлена в чат {}: {}", chatId, response);
+            } else {
+                logger.error("❌ Получен пустой ответ при отправке фотографии в чат {}", chatId);
+            }
 
         } catch (Exception e) {
             logger.error("Error sending photo to {}: {}", chatId, e.getMessage(), e);
@@ -659,16 +654,19 @@ public class TelegramWebhookController {
             logger.info("URL: {}", url);
             logger.info("JSON: {}", jsonBody);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> logger.info("✅ Фотография с кнопкой отправлена в чат {}: {}", chatId, response),
-                        error -> logger.error("❌ Ошибка отправки фотографии с кнопкой в чат {}: {}", chatId, error.getMessage())
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Фотография с кнопкой отправлена в чат {}: {}", chatId, response);
+            } else {
+                logger.error("❌ Получен пустой ответ при отправке фотографии с кнопкой в чат {}", chatId);
+            }
 
         } catch (Exception e) {
             logger.error("Error sending photo with inline button to {}: {}", chatId, e.getMessage(), e);
@@ -725,22 +723,20 @@ public class TelegramWebhookController {
             logger.info("URL: {}", url);
             logger.info("JSON: {}", jsonBody);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> {
-                            logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response);
-                            logger.info("=== КОНЕЦ ОТПРАВКИ СООБЩЕНИЯ С INLINE КЛАВИАТУРОЙ ===");
-                        },
-                        error -> {
-                            logger.error("❌ Ошибка отправки сообщения с inline клавиатурой в чат {}: {}", chatId, error.getMessage());
-                            logger.info("=== КОНЕЦ ОТПРАВКИ СООБЩЕНИЯ С INLINE КЛАВИАТУРОЙ (ОШИБКА) ===");
-                        }
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response);
+                logger.info("=== КОНЕЦ ОТПРАВКИ СООБЩЕНИЯ С INLINE КЛАВИАТУРОЙ ===");
+            } else {
+                logger.error("❌ Получен пустой ответ при отправке сообщения с inline клавиатурой в чат {}", chatId);
+            }
 
         } catch (Exception e) {
             logger.error("Error sending message with inline keyboard to {}: {}", chatId, e.getMessage(), e);
@@ -796,16 +792,19 @@ public class TelegramWebhookController {
             logger.info("URL: {}", url);
             logger.info("JSON: {}", jsonBody);
 
-            webClient.post()
+            String response = webClient.post()
                     .uri(url)
                     .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                     .bodyValue(jsonBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .subscribe(
-                        response -> logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response),
-                        error -> logger.error("❌ Ошибка отправки сообщения с inline клавиатурой в чат {}: {}", chatId, error.getMessage())
-                    );
+                    .block();
+            
+            if (response != null) {
+                logger.info("✅ Сообщение с inline клавиатурой отправлено в чат {}: {}", chatId, response);
+            } else {
+                logger.error("❌ Получен пустой ответ при отправке сообщения с inline клавиатурой в чат {}", chatId);
+            }
 
         } catch (Exception e) {
             logger.error("Error sending message with inline keyboard to {}: {}", chatId, e.getMessage(), e);
