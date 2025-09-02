@@ -361,6 +361,13 @@ public class TelegramWebhookController {
             String mainRecommendationsHeader = "*Основные рекомендации*\nСовместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца";
             sendMessage(user.getChatId(), mainRecommendationsHeader);
             
+            // Небольшая задержка для правильного порядка сообщений
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
             // 2. Отправляем альбом из 3 фото основных БАДов
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
                 logger.info("Отправляем {} основных рекомендаций", result.getMainRecommendations().size());
@@ -397,6 +404,13 @@ public class TelegramWebhookController {
             // 3. Отправляем заголовок дополнительных рекомендаций
             String additionalRecommendationsHeader = "*Дополнительные рекомендации*\nЭти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца";
             sendMessage(user.getChatId(), additionalRecommendationsHeader);
+            
+            // Небольшая задержка для правильного порядка сообщений
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             
             // 4. Отправляем альбом из 2 фото дополнительных БАДов
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
