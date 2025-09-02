@@ -199,11 +199,7 @@ public class TelegramWebhookController {
 
         logger.info("Состояние пользователя {} сброшено: {}", user.getUsername(), user.getState());
 
-        // Отправляем приветственное сообщение
-        String welcomeMessage = String.format("Здравствуйте, %s! Ответьте на несколько вопросов — подберём, что вам подойдет", 
-                user.getFirstName() != null ? user.getFirstName() : "друг");
 
-        sendMessage(user.getChatId(), welcomeMessage);
         
         // Отправляем изображение start.jpg (временно отключено)
         // String imagePath = "https://i.ibb.co/67WZjKj6/start.jpg";
@@ -355,38 +351,68 @@ public class TelegramWebhookController {
         try {
             ScoreCalculationService.RecommendationResult result = surveyService.getRecommendations(user);
             
-            StringBuilder message = new StringBuilder();
-            message.append("*🎯 Ваши персональные рекомендации:*\n\n");
+            // 1. Отправляем заголовок основных рекомендаций
+            String mainRecommendationsHeader = "*Основные рекомендации*\nСовместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца";
+            sendMessage(user.getChatId(), mainRecommendationsHeader);
             
-            // Основные рекомендации
+            // 2. Отправляем альбом из 3 фото основных БАДов
             if (result.getMainRecommendations() != null && !result.getMainRecommendations().isEmpty()) {
-                message.append("*🏆 Основные рекомендации:*\n");
-                message.append("Совместимы, безопасны, рассчитаны на совместный приём — рекомендуем принимать курсом 3 месяца\n\n");
-                for (int i = 0; i < result.getMainRecommendations().size(); i++) {
+                for (int i = 0; i < Math.min(3, result.getMainRecommendations().size()); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getMainRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
-                    message.append(i + 1).append(". ").append(supplement.getName()).append("\n");
-                    message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
-                    message.append("\n");
+                    
+                    // Формируем подпись с Markdown
+                    String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
+                        supplement.getName(),
+                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует",
+                        supplementWithScore.getScore()
+                    );
+                    
+                    // Отправляем фото с inline кнопкой "Подробнее"
+                    String buttonUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
+                    if (supplement.getImageUrl() != null && !supplement.getImageUrl().isEmpty()) {
+                        sendPhotoWithInlineButton(user.getChatId(), supplement.getImageUrl(), caption, "Подробнее", buttonUrl);
+                    } else {
+                        // Если нет фото, отправляем только текст с кнопкой
+                        sendMessageWithInlineKeyboard(user.getChatId(), caption, 
+                            createInlineButtonKeyboard("Подробнее", buttonUrl));
+                    }
                 }
             }
             
-            // Дополнительные рекомендации
+            // 3. Отправляем заголовок дополнительных рекомендаций
+            String additionalRecommendationsHeader = "*Дополнительные рекомендации*\nЭти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца";
+            sendMessage(user.getChatId(), additionalRecommendationsHeader);
+            
+            // 4. Отправляем альбом из 2 фото дополнительных БАДов
             if (result.getAdditionalRecommendations() != null && !result.getAdditionalRecommendations().isEmpty()) {
-                message.append("*💡 Дополнительные рекомендации:*\n");
-                message.append("Эти добавки безопасно сочетаются с основными и усиливают их действие: можете подключать их вместе или позже, рекомендуемый курс — 3 месяца\n\n");
-                for (int i = 0; i < result.getAdditionalRecommendations().size(); i++) {
+                for (int i = 0; i < Math.min(2, result.getAdditionalRecommendations().size()); i++) {
                     ScoreCalculationService.SupplementWithScore supplementWithScore = result.getAdditionalRecommendations().get(i);
                     Supplement supplement = supplementWithScore.getSupplement();
-                    message.append(i + 1).append(". ").append(supplement.getName()).append("\n");
-                    message.append("   Баллы: ").append(supplementWithScore.getScore()).append("\n");
-                    message.append("\n");
+                    
+                    // Формируем подпись с Markdown
+                    String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
+                        supplement.getName(),
+                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует",
+                        supplementWithScore.getScore()
+                    );
+                    
+                    // Отправляем фото с inline кнопкой "Подробнее"
+                    String buttonUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
+                    if (supplement.getImageUrl() != null && !supplement.getImageUrl().isEmpty()) {
+                        sendPhotoWithInlineButton(user.getChatId(), supplement.getImageUrl(), caption, "Подробнее", buttonUrl);
+                    } else {
+                        // Если нет фото, отправляем только текст с кнопкой
+                        sendMessageWithInlineKeyboard(user.getChatId(), caption, 
+                            createInlineButtonKeyboard("Подробнее", buttonUrl));
+                    }
                 }
             }
             
-            message.append("💡 *Совет:* Проконсультируйтесь с врачом перед приемом любых добавок.\n\n");
-            message.append("🔄 Хотите пройти опрос заново?\n\n");
-            message.append("Хотите ещё точнее? GenAIS™ проверит риски по генам и обновит схему");
+            // 5. Отправляем финальное сообщение с кнопками
+            String finalMessage = "💡 *Совет:* Проконсультируйтесь с врачом перед приемом любых добавок.\n\n" +
+                                "🔄 Хотите пройти опрос заново?\n\n" +
+                                "Хотите ещё точнее? GenAIS™ проверит риски по генам и обновит схему";
             
             // Создаем клавиатуру с кнопками
             InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
@@ -410,7 +436,7 @@ public class TelegramWebhookController {
             
             keyboard.setKeyboard(keyboardRows);
             
-            sendMessageWithKeyboard(user.getChatId(), message.toString(), keyboard);
+            sendMessageWithKeyboard(user.getChatId(), finalMessage, keyboard);
             
         } catch (Exception e) {
             logger.error("Ошибка при получении рекомендаций для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
@@ -436,6 +462,21 @@ public class TelegramWebhookController {
             keyboardRows.add(row);
         }
 
+        keyboard.setKeyboard(keyboardRows);
+        return keyboard;
+    }
+    
+    private InlineKeyboardMarkup createInlineButtonKeyboard(String buttonText, String buttonUrl) {
+        InlineKeyboardMarkup keyboard = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> keyboardRows = new ArrayList<>();
+        
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText(buttonText);
+        button.setUrl(buttonUrl);
+        row.add(button);
+        keyboardRows.add(row);
+        
         keyboard.setKeyboard(keyboardRows);
         return keyboard;
     }
@@ -560,6 +601,41 @@ public class TelegramWebhookController {
 
         } catch (Exception e) {
             logger.error("Error sending photo to {}: {}", chatId, e.getMessage(), e);
+        }
+    }
+    
+    private void sendPhotoWithInlineButton(Long chatId, String imagePath, String caption, String buttonText, String buttonUrl) {
+        try {
+            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendPhoto";
+            
+            // Создаем inline кнопку
+            String keyboardJson = String.format(
+                "\"reply_markup\":{\"inline_keyboard\":[[{\"text\":\"%s\",\"url\":\"%s\"}]]}",
+                buttonText, buttonUrl
+            );
+            
+            String jsonBody = String.format(
+                "{\"chat_id\":\"%s\",\"photo\":\"%s\",\"caption\":\"%s\",\"parse_mode\":\"Markdown\",%s}",
+                chatId, imagePath, caption.replace("\"", "\\\""), keyboardJson
+            );
+
+            logger.info("Отправка фотографии с inline кнопкой в чат {}: {}", chatId, caption);
+            logger.info("URL: {}", url);
+            logger.info("JSON: {}", jsonBody);
+
+            webClient.post()
+                    .uri(url)
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .bodyValue(jsonBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .subscribe(
+                        response -> logger.info("✅ Фотография с кнопкой отправлена в чат {}: {}", chatId, response),
+                        error -> logger.error("❌ Ошибка отправки фотографии с кнопкой в чат {}: {}", chatId, error.getMessage())
+                    );
+
+        } catch (Exception e) {
+            logger.error("Error sending photo with inline button to {}: {}", chatId, e.getMessage(), e);
         }
     }
     
