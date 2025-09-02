@@ -205,9 +205,9 @@ public class TelegramWebhookController {
 
         sendMessage(user.getChatId(), welcomeMessage);
         
-        // Отправляем изображение start.jpg
-        String imagePath = "https://i.ibb.co/67WZjKj6/start.jpg";
-        sendPhoto(user.getChatId(), imagePath, "Начнем подбор БАДов для вас!");
+        // Отправляем изображение start.jpg (временно отключено)
+        // String imagePath = "https://i.ibb.co/67WZjKj6/start.jpg";
+        // sendPhoto(user.getChatId(), imagePath, "Начнем подбор БАДов для вас!");
 
         // Отправляем первый вопрос
         sendNextQuestion(user);
@@ -329,7 +329,13 @@ public class TelegramWebhookController {
         
         logger.info("Тема: {}, Всего вопросов: {}, Текущий вопрос: {}", selectedTopic, totalQuestions, currentQuestion);
         
-        String questionText = "Вопрос " + currentQuestion + " из " + totalQuestions + ":\n\n" + question.getText();
+        // Для первого вопроса (выбор темы) убираем нумерацию
+        String questionText;
+        if (user.getCurrentQuestionIndex() == 0) {
+            questionText = question.getText();
+        } else {
+            questionText = "Вопрос " + currentQuestion + " из " + totalQuestions + ":\n\n" + question.getText();
+        }
         logger.info("Текст вопроса: {}", questionText);
 
         logger.info("Создаем inline клавиатуру с {} вариантами ответов", question.getOptions().size());
