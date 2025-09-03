@@ -763,7 +763,14 @@ public class TelegramWebhookController {
                     InlineKeyboardButton button = row.get(j);
                     keyboardJson.append("{");
                     keyboardJson.append("\"text\":\"").append(button.getText().replace("\"", "\\\"")).append("\",");
-                    keyboardJson.append("\"callback_data\":\"").append(button.getCallbackData().replace("\"", "\\\"")).append("\"");
+                    
+                    // Проверяем тип кнопки: URL или callback_data
+                    if (button.getUrl() != null && !button.getUrl().isEmpty()) {
+                        keyboardJson.append("\"url\":\"").append(button.getUrl().replace("\"", "\\\"")).append("\"");
+                    } else if (button.getCallbackData() != null && !button.getCallbackData().isEmpty()) {
+                        keyboardJson.append("\"callback_data\":\"").append(button.getCallbackData().replace("\"", "\\\"")).append("\"");
+                    }
+                    
                     keyboardJson.append("}");
                     
                     if (j < row.size() - 1) {
