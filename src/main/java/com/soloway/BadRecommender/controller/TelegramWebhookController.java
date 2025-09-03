@@ -372,10 +372,9 @@ public class TelegramWebhookController {
                     logger.info("ImageUrl: {}, ProductUrl: {}", supplement.getImageUrl(), supplement.getProductUrl());
                     
                     // Формируем подпись с Markdown
-                    String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
+                    String caption = String.format("*%s*\n\n%s", 
                         supplement.getName(),
-                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует",
-                        supplementWithScore.getScore()
+                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует"
                     );
                     
                     // Отправляем фото с inline кнопкой "Подробнее"
@@ -409,10 +408,9 @@ public class TelegramWebhookController {
                     logger.info("ImageUrl: {}, ProductUrl: {}", supplement.getImageUrl(), supplement.getProductUrl());
                     
                     // Формируем подпись с Markdown
-                    String caption = String.format("*%s*\n\n%s\n\n*Баллы:* %s", 
+                    String caption = String.format("*%s*\n\n%s", 
                         supplement.getName(),
-                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует",
-                        supplementWithScore.getScore()
+                        supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует"
                     );
                     
                     // Отправляем фото с inline кнопкой "Подробнее"
@@ -452,7 +450,7 @@ public class TelegramWebhookController {
             List<InlineKeyboardButton> row2 = new ArrayList<>();
             InlineKeyboardButton geneticsButton = new InlineKeyboardButton();
             geneticsButton.setText("🧬 Хочу точнее");
-            geneticsButton.setCallbackData("GENETICS");
+            geneticsButton.setUrl("https://soloways.tilda.ws/pers_bad");
             row2.add(geneticsButton);
             keyboardRows.add(row2);
             
