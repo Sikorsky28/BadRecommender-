@@ -45,7 +45,9 @@ public class TelegramWebhookController {
         this.botConfig = botConfig;
         this.userService = userService;
         this.surveyService = surveyService;
-        this.webClient = WebClient.builder().build();
+        this.webClient = WebClient.builder()
+                .codecs(configurer -> configurer.defaultCodecs().maxInMemorySize(1024 * 1024)) // 1MB
+                .build();
         logger.info("TelegramWebhookController создан");
     }
 
@@ -146,6 +148,12 @@ public class TelegramWebhookController {
         // Проверяем специальные callback'и
         if ("NEW_SURVEY".equals(callbackData)) {
             logger.info("Пользователь {} нажал кнопку 'Новый опрос'", user.getUsername());
+            
+            // Проверяем, не "заснул" ли пользователь
+            if (user.getState() == TelegramUser.UserState.SURVEY_COMPLETED) {
+                logger.info("Пользователь {} был в состоянии SURVEY_COMPLETED, сбрасываем опрос", user.getUsername());
+            }
+            
             handleStartCommand(user);
             userService.updateUser(user);
             answerCallbackQuery(callbackQueryId);
@@ -189,24 +197,44 @@ public class TelegramWebhookController {
     private void handleStartCommand(TelegramUser user) {
         logger.info("Выполнение команды /start для пользователя {}", user.getUsername());
 
-        // Полностью сбрасываем состояние пользователя
-        user.resetSurvey();
-        user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
-        user.setSurveyCompleted(false);
-        user.setCurrentQuestionIndex(0);
-        user.setSelectedTopic(null);
-        user.setAnswers(new HashMap<>());
+        try {
+            // Полностью сбрасываем состояние пользователя
+            user.resetSurvey();
+            user.setState(TelegramUser.UserState.SURVEY_IN_PROGRESS);
+            user.setSurveyCompleted(false);
+            user.setCurrentQuestionIndex(0);
+            user.setSelectedTopic(null);
+            user.setAnswers(new HashMap<>());
 
-        logger.info("Состояние пользователя {} сброшено: {}", user.getUsername(), user.getState());
+            logger.info("Состояние пользователя {} сброшено: {}", user.getUsername(), user.getState());
 
-
-        
-        // Отправляем изображение start.jpg (временно отключено)
-        // String imagePath = "https://i.ibb.co/67WZjKj6/start.jpg";
-        // sendPhoto(user.getChatId(), imagePath, "Начнем подбор БАДов для вас!");
-
-        // Отправляем первый вопрос
-        sendNextQuestion(user);
+            // Сначала обновляем пользователя в базе данных
+            userService.updateUser(user);
+            
+            // Отправляем приветственное сообщение
+            String welcomeMessage = "👋 *Добро пожаловать в SOLOWAYS!*\n\n" +
+                    "Я помогу подобрать персональные рекомендации БАДов на основе ваших ответов.\n\n" +
+                    "Давайте начнем с выбора интересующей вас темы здоровья.";
+            
+            sendMessage(user.getChatId(), welcomeMessage);
+            
+            // Небольшая задержка перед отправкой первого вопроса
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
+            // Отправляем первый вопрос
+            sendNextQuestion(user);
+            
+        } catch (Exception e) {
+            logger.error("Ошибка при выполнении команды /start для пользователя {}: {}", user.getUsername(), e.getMessage(), e);
+            
+            // Fallback сообщение
+            String errorMessage = "Произошла ошибка при запуске опроса. Попробуйте еще раз через несколько секунд.";
+            sendMessage(user.getChatId(), errorMessage);
+        }
     }
 
     private void handleHelpCommand(TelegramUser user) {
@@ -256,6 +284,8 @@ public class TelegramWebhookController {
 
         sendMessage(user.getChatId(), geneticsMessage);
     }
+
+
 
     private void handleRegularMessage(TelegramUser user, String messageText) {
         switch (user.getState()) {
@@ -571,33 +601,50 @@ public class TelegramWebhookController {
     }
 
     private void sendMessage(Long chatId, String text) {
-        try {
-            String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendMessage";
-            String jsonBody = String.format(
-                "{\"chat_id\":\"%s\",\"text\":\"%s\",\"parse_mode\":\"Markdown\"}",
-                chatId, text.replace("\"", "\\\"").replace("\n", "\\n")
-            );
+        sendMessageWithRetry(chatId, text, 3);
+    }
+    
+    private void sendMessageWithRetry(Long chatId, String text, int maxRetries) {
+        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                String url = "https://api.telegram.org/bot" + botConfig.getBotToken() + "/sendMessage";
+                String jsonBody = String.format(
+                    "{\"chat_id\":\"%s\",\"text\":\"%s\",\"parse_mode\":\"Markdown\"}",
+                    chatId, text.replace("\"", "\\\"").replace("\n", "\\n")
+                );
 
-            logger.info("Отправка сообщения в чат {}: {}", chatId, text);
-            logger.info("URL: {}", url);
-            logger.info("JSON: {}", jsonBody);
+                logger.info("Отправка сообщения в чат {} (попытка {}/{}): {}", chatId, attempt, maxRetries, text);
 
-            String response = webClient.post()
-                    .uri(url)
-                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
-                    .bodyValue(jsonBody)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-            
-            if (response != null) {
-                logger.info("✅ Сообщение отправлено в чат {}: {}", chatId, response);
-            } else {
-                logger.error("❌ Получен пустой ответ при отправке сообщения в чат {}", chatId);
+                String response = webClient.post()
+                        .uri(url)
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .bodyValue(jsonBody)
+                        .retrieve()
+                        .bodyToMono(String.class)
+                        .block();
+                
+                if (response != null) {
+                    logger.info("✅ Сообщение отправлено в чат {} (попытка {}): {}", chatId, attempt, response);
+                    return; // Успешно отправлено
+                } else {
+                    logger.warn("⚠️ Получен пустой ответ при отправке сообщения в чат {} (попытка {})", chatId, attempt);
+                }
+
+            } catch (Exception e) {
+                logger.error("❌ Ошибка отправки сообщения в чат {} (попытка {}): {}", chatId, attempt, e.getMessage());
+                
+                if (attempt == maxRetries) {
+                    logger.error("❌ Не удалось отправить сообщение в чат {} после {} попыток", chatId, maxRetries);
+                } else {
+                    // Небольшая задержка перед повторной попыткой
+                    try {
+                        Thread.sleep(1000 * attempt); // 1s, 2s, 3s
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
             }
-
-        } catch (Exception e) {
-            logger.error("Error sending message to {}: {}", chatId, e.getMessage(), e);
         }
     }
 
