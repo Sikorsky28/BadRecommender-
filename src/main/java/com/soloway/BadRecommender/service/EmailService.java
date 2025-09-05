@@ -181,11 +181,28 @@ public class EmailService {
         int count = Math.min(maxCount, recommendations.size());
         StringBuilder html = new StringBuilder();
         
-        // Генерируем карточки в формате как в оригинальном шаблоне
+        // Создаем единую таблицу с ячейками для карточек
+        html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
+        
+        // Добавляем MSO ячейки
+        for (int i = 0; i < count; i++) {
+            int width = count == 3 ? (i == 0 ? 194 : 173) : 270;
+            html.append("<td style=\"width:").append(width).append("px\" valign=\"top\">");
+        }
+        html.append("</tr></table><![endif]-->");
+        
+        // Генерируем карточки как ячейки единой таблицы
         for (int i = 0; i < count; i++) {
             Supplement supplement = recommendations.get(i);
             html.append(buildSupplementCardHtml(supplement, i, count));
+            
+            // Добавляем разделитель между карточками (кроме последней)
+            if (i < count - 1) {
+                html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
+            }
         }
+        
+        html.append("<!--[if mso]></td></tr></table><![endif]-->");
         
         return html.toString();
     }
@@ -204,18 +221,8 @@ public class EmailService {
         int cardWidth = totalCount == 3 ? 174 : 270;
         int imageWidth = totalCount == 3 ? 164 : 164;
         String alignClass = index == 0 ? "es-left" : (index == totalCount - 1 ? "es-right" : "es-left");
-        String msoWidth = totalCount == 3 ? (index == 0 ? "194px" : (index == 1 ? "173px" : "173px")) : "270px";
         
         StringBuilder html = new StringBuilder();
-        
-        // MSO условные комментарии
-        if (index == 0) {
-            html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
-        } else if (index == totalCount - 1) {
-            html.append("<!--[if mso]></td><td style=\"width:20px\"></td><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
-        } else {
-            html.append("<!--[if mso]></td><td style=\"width:20px\"></td><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
-        }
         
         // Основная таблица карточки
         html.append("<table cellpadding=\"0\" cellspacing=\"0\" align=\"").append(index == totalCount - 1 ? "right" : "left").append("\" class=\"").append(alignClass).append("\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:").append(index == totalCount - 1 ? "right" : "left").append("\">");
@@ -256,16 +263,6 @@ public class EmailService {
         html.append("</table></td>");
         html.append("</tr>");
         html.append("</table>");
-        
-        // Закрывающие MSO комментарии
-        if (index == totalCount - 1) {
-            html.append("<!--[if mso]></td></tr></table><![endif]-->");
-        }
-        
-        // Добавляем разделитель между карточками (кроме последней)
-        if (index < totalCount - 1) {
-            html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
-        }
         
         return html.toString();
     }
