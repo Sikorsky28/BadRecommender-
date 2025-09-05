@@ -179,33 +179,13 @@ public class EmailService {
         }
         
         int count = Math.min(maxCount, recommendations.size());
-        
-        // Создаем общую таблицу с колонками
         StringBuilder html = new StringBuilder();
-        html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
         
-        // Добавляем колонки для MSO
-        for (int i = 0; i < count; i++) {
-            html.append("<td style=\"width:").append(560 / count).append("px\" valign=\"top\">");
-        }
-        html.append("</tr></table><![endif]-->");
-        
-        // Основная таблица
-        html.append("<table width=\"560\" cellpadding=\"0\" cellspacing=\"0\" align=\"center\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px\">");
-        html.append("<tr>");
-        
-        // Генерируем карточки
+        // Генерируем карточки в формате как в оригинальном шаблоне
         for (int i = 0; i < count; i++) {
             Supplement supplement = recommendations.get(i);
-            html.append(buildSupplementCardHtml(supplement));
-            
-            if (i < count - 1) {
-                html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
-            }
+            html.append(buildSupplementCardHtml(supplement, i, count));
         }
-        
-        html.append("</tr>");
-        html.append("</table>");
         
         return html.toString();
     }
@@ -213,31 +193,81 @@ public class EmailService {
     /**
      * Строит HTML карточки для одного БАДа
      */
-    private String buildSupplementCardHtml(Supplement supplement) {
+    private String buildSupplementCardHtml(Supplement supplement, int index, int totalCount) {
         String imageUrl = supplement.getImageUrl() != null ? supplement.getImageUrl() : "https://ewunnow.stripocdn.email/content/guids/CABINET_9792b212c76b5f87196ee439d52ce7525ccfe0e78e0e5256a0d822ee48f60855/images/63283055_mzX.jpg";
         String productUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
         String name = supplement.getName() != null ? supplement.getName() : "БАД";
         String fullDescription = supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует";
         String description = truncateDescription(fullDescription, 80); // Ограничиваем до 80 символов
         
-        return String.format(
-            "<td align=\"center\" class=\"es-m-p0r es-m-p20b\" style=\"padding:0;Margin:0;width:174px\">" +
-            "<table width=\"174\" cellpadding=\"0\" cellspacing=\"0\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">" +
-            "<tr>" +
-            "<td align=\"center\" style=\"padding:5px;Margin:0;font-size:0px\"><img src=\"%s\" alt=\"\" width=\"164\" height=\"164\" class=\"adapt-img\" style=\"display:block;font-size:14px;border:0;outline:none;text-decoration:none;margin:0\"></td>" +
-            "</tr>" +
-            "<tr>" +
-            "<td align=\"center\" style=\"padding:0;Margin:0;padding-right:10px;padding-left:10px\"><h3 class=\"es-m-txt-c\" style=\"Margin:0;font-family:helvetica, 'helvetica neue', arial, verdana, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:20px;font-style:normal;font-weight:bold;line-height:24px;color:#333333\">%s</h3><p class=\"es-m-txt-c\" style=\"Margin:0;mso-line-height-rule:exactly;font-family:helvetica, 'helvetica neue', arial, verdana, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px\"><br></p></td>" +
-            "</tr>" +
-            "<tr>" +
-            "<td align=\"center\" style=\"padding:0;Margin:0;padding-top:5px;padding-right:10px;padding-left:10px\"><p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\">%s</p><p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\"><br></p></td>" +
-            "</tr>" +
-            "<tr>" +
-            "<td align=\"center\" style=\"padding:0;Margin:0;padding-bottom:20px;padding-right:5px;padding-left:5px\"><span class=\"es-button-border\" style=\"border-style:solid;border-color:#5c68e2;background:#55685b;border-width:0;display:inline-block;border-radius:8px;width:auto\"><a href=\"%s\" target=\"_blank\" class=\"es-button es-button-1621628636490\" style=\"mso-style-priority:100 !important;text-decoration:none !important;mso-line-height-rule:exactly;color:#ffffff;font-size:20px;padding:5px 30px;display:inline-block;background:#55685b;border-radius:8px;font-family:arial, 'helvetica neue', helvetica, sans-serif;font-weight:normal;font-style:normal;line-height:24px;width:auto;text-align:center;letter-spacing:0;mso-padding-alt:0;mso-border-alt:10px solid #55685b\">купить</a></span></td>" +
-            "</tr>" +
-            "</table></td>",
-            imageUrl, name, description, productUrl
-        );
+        // Определяем ширину карточки в зависимости от количества
+        int cardWidth = totalCount == 3 ? 174 : 270;
+        int imageWidth = totalCount == 3 ? 164 : 164;
+        String alignClass = index == 0 ? "es-left" : (index == totalCount - 1 ? "es-right" : "es-left");
+        String msoWidth = totalCount == 3 ? (index == 0 ? "194px" : (index == 1 ? "173px" : "173px")) : "270px";
+        
+        StringBuilder html = new StringBuilder();
+        
+        // MSO условные комментарии
+        if (index == 0) {
+            html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
+        } else if (index == totalCount - 1) {
+            html.append("<!--[if mso]></td><td style=\"width:20px\"></td><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
+        } else {
+            html.append("<!--[if mso]></td><td style=\"width:20px\"></td><td style=\"width:").append(msoWidth).append("\" valign=\"top\"><![endif]-->");
+        }
+        
+        // Основная таблица карточки
+        html.append("<table cellpadding=\"0\" cellspacing=\"0\" align=\"").append(index == totalCount - 1 ? "right" : "left").append("\" class=\"").append(alignClass).append("\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:").append(index == totalCount - 1 ? "right" : "left").append("\">");
+        html.append("<tr>");
+        html.append("<td align=\"center\" class=\"").append(index == 0 ? "es-m-p0r es-m-p20b" : "es-m-p20b").append("\" style=\"padding:0;Margin:0;width:").append(cardWidth).append("px\">");
+        html.append("<table cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">");
+        
+        // Изображение
+        html.append("<tr>");
+        html.append("<td align=\"center\" style=\"padding:5px;Margin:0;font-size:0px\"><img src=\"").append(imageUrl).append("\" alt=\"\" width=\"").append(imageWidth).append("\" class=\"adapt-img\" style=\"display:block;font-size:14px;border:0;outline:none;text-decoration:none;margin:0\"></td>");
+        html.append("</tr>");
+        
+        // Название
+        html.append("<tr>");
+        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-right:10px;padding-left:10px\"><h3 class=\"es-m-txt-c\" style=\"Margin:0;font-family:arial, 'helvetica neue', helvetica, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:20px;font-style:normal;font-weight:bold;line-height:24px;color:#333333\">").append(name).append("</h3>");
+        if (totalCount == 2) {
+            html.append("</td>");
+        } else {
+            html.append("<p class=\"es-m-txt-c\" style=\"Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px\"><br></p></td>");
+        }
+        html.append("</tr>");
+        
+        // Описание
+        html.append("<tr>");
+        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-top:5px;padding-right:10px;padding-left:10px\">");
+        if (totalCount == 2) {
+            html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\"><br></p>");
+        }
+        html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\">").append(description).append("</p>");
+        html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\"><br></p></td>");
+        html.append("</tr>");
+        
+        // Кнопка
+        html.append("<tr>");
+        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-bottom:20px;padding-right:5px;padding-left:5px\"><span class=\"es-button-border\" style=\"border-style:solid;border-color:#5c68e2;background:#55685b;border-width:0;display:inline-block;border-radius:8px;width:auto\"><a href=\"").append(productUrl).append("\" target=\"_blank\" class=\"es-button es-button-1621628636490\" style=\"mso-style-priority:100 !important;text-decoration:none !important;mso-line-height-rule:exactly;color:#ffffff;font-size:20px;padding:5px 30px;display:inline-block;background:#55685b;border-radius:8px;font-family:arial, 'helvetica neue', helvetica, sans-serif;font-weight:normal;font-style:normal;line-height:24px;width:auto;text-align:center;letter-spacing:0;mso-padding-alt:0;mso-border-alt:10px solid #55685b\">купить</a></span></td>");
+        html.append("</tr>");
+        
+        html.append("</table></td>");
+        html.append("</tr>");
+        html.append("</table>");
+        
+        // Закрывающие MSO комментарии
+        if (index == totalCount - 1) {
+            html.append("<!--[if mso]></td></tr></table><![endif]-->");
+        }
+        
+        // Добавляем разделитель между карточками (кроме последней)
+        if (index < totalCount - 1) {
+            html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
+        }
+        
+        return html.toString();
     }
 
     /**
