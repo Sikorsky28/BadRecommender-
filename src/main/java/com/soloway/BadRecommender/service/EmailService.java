@@ -200,7 +200,8 @@ public class EmailService {
         String imageUrl = supplement.getImageUrl() != null ? supplement.getImageUrl() : "https://ewunnow.stripocdn.email/content/guids/CABINET_9792b212c76b5f87196ee439d52ce7525ccfe0e78e0e5256a0d822ee48f60855/images/63283055_mzX.jpg";
         String productUrl = supplement.getProductUrl() != null ? supplement.getProductUrl() : "https://soloways.tilda.ws";
         String name = supplement.getName() != null ? supplement.getName() : "БАД";
-        String description = supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует";
+        String fullDescription = supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует";
+        String description = truncateDescription(fullDescription, 80); // Ограничиваем до 80 символов
         
         return String.format(
             "<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:194px\" valign=\"top\"><![endif]-->" +
@@ -225,6 +226,25 @@ public class EmailService {
             "</table><!--[if mso]></td></tr></table><![endif]-->",
             imageUrl, name, description, productUrl
         );
+    }
+
+    /**
+     * Обрезает описание до указанной длины
+     */
+    private String truncateDescription(String description, int maxLength) {
+        if (description == null || description.length() <= maxLength) {
+            return description;
+        }
+        
+        // Ищем последний пробел перед максимальной длиной
+        String truncated = description.substring(0, maxLength);
+        int lastSpace = truncated.lastIndexOf(' ');
+        
+        if (lastSpace > maxLength * 0.7) { // Если пробел не слишком далеко от конца
+            truncated = truncated.substring(0, lastSpace);
+        }
+        
+        return truncated + "...";
     }
 
     /**
