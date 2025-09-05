@@ -22,11 +22,9 @@
   - `sendEmail()` - отправка простого текстового email
   - `sendRecommendationsEmail()` - отправка текстового email с рекомендациями
 
-### 3. EmailController
-- **Файл**: `src/main/java/com/soloway/BadRecommender/controller/EmailController.java`
-- **Endpoints**:
-  - `POST /api/email/send-recommendations` - отправка рекомендаций
-  - `POST /api/email/test` - тестовая отправка
+### 3. RecommendationController
+- **Файл**: `src/main/java/com/soloway/BadRecommender/controller/RecommendationController.java`
+- **Endpoint**: `POST /api/recommendation/submit` - отправка рекомендаций с автоматической рассылкой email
 
 ### 4. RecommendationService
 - **Файл**: `src/main/java/com/soloway/BadRecommender/service/RecommendationService.java`
@@ -40,22 +38,25 @@
 
 ## Использование
 
-### 1. Через API
+### 1. Через API (основной способ)
 
 ```bash
-POST /api/email/send-recommendations
+POST /api/recommendation/submit
 Content-Type: application/json
 
 {
-  "userEmail": "user@example.com",
+  "email": "user@example.com",
   "userName": "Иван",
-  "selectedTopic": "energy"
+  "selectedTopic": "energy",
+  "answers": [...],
+  "consentPd": true,
+  "consentMarketing": true
 }
 ```
 
 ### 2. Через веб-форму
 
-Откройте: `https://your-domain.com/email-form.html`
+Откройте: `https://your-domain.com/` (основная форма опроса)
 
 ### 3. Программно
 
@@ -63,13 +64,9 @@ Content-Type: application/json
 @Autowired
 private EmailService emailService;
 
-@Autowired
-private RecommendationService recommendationService;
-
-public void sendRecommendations(String userEmail, String userName, String topicCode) {
-    List<Supplement> mainRecommendations = recommendationService.getMainRecommendations(topicCode);
-    List<Supplement> additionalRecommendations = recommendationService.getAdditionalRecommendations(topicCode);
-    
+public void sendRecommendations(String userEmail, String userName, String topicCode, 
+                               List<Supplement> mainRecommendations, 
+                               List<Supplement> additionalRecommendations) {
     emailService.sendHtmlRecommendationsEmail(
         userEmail, userName, topicCode, 
         mainRecommendations, additionalRecommendations
@@ -122,10 +119,11 @@ GOOGLE_SHEETS_SPREADSHEET_ID: your-spreadsheet-id
 
 ## Тестирование
 
-1. Откройте `https://your-domain.com/email-form.html`
-2. Заполните форму тестовыми данными
-3. Нажмите "Отправить рекомендации"
-4. Проверьте email получателя
+1. Откройте `https://your-domain.com/`
+2. Заполните форму опроса с тестовыми данными
+3. Укажите email и дайте согласие на обработку ПД
+4. Нажмите "Получить рекомендации"
+5. Проверьте email получателя
 
 ## Логирование
 

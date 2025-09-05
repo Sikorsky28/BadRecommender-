@@ -101,7 +101,7 @@ public class RecommendationController {
             List<Supplement> mainSupplements = convertToSupplements(result.getMainRecommendations());
             List<Supplement> additionalSupplements = convertToSupplements(result.getAdditionalRecommendations());
             
-            emailService.sendRecommendationsEmail(
+            emailService.sendHtmlRecommendationsEmail(
                 request.getEmail(),
                 userName,
                 request.getSelectedTopic(),
