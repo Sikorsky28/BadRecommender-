@@ -204,13 +204,13 @@ public class EmailService {
         String description = truncateDescription(fullDescription, 80); // Ограничиваем до 80 символов
         
         return String.format(
-            "<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:194px\" valign=\"top\"><![endif]-->" +
-            "<table cellpadding=\"0\" cellspacing=\"0\" align=\"left\" class=\"es-left\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:left\">" +
+            "<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:174px\" valign=\"top\"><![endif]-->" +
+            "<table width=\"174\" cellpadding=\"0\" cellspacing=\"0\" align=\"left\" class=\"es-left\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:left\">" +
             "<tr>" +
             "<td align=\"center\" class=\"es-m-p0r es-m-p20b\" style=\"padding:0;Margin:0;width:174px\">" +
-            "<table cellpadding=\"0\" cellspacing=\"0\" width=\"100%%\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">" +
+            "<table width=\"174\" cellpadding=\"0\" cellspacing=\"0\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">" +
             "<tr>" +
-            "<td align=\"center\" style=\"padding:5px;Margin:0;font-size:0px\"><img src=\"%s\" alt=\"\" width=\"164\" class=\"adapt-img\" style=\"display:block;font-size:14px;border:0;outline:none;text-decoration:none;margin:0\"></td>" +
+            "<td align=\"center\" style=\"padding:5px;Margin:0;font-size:0px\"><img src=\"%s\" alt=\"\" width=\"164\" height=\"164\" class=\"adapt-img\" style=\"display:block;font-size:14px;border:0;outline:none;text-decoration:none;margin:0\"></td>" +
             "</tr>" +
             "<tr>" +
             "<td align=\"center\" style=\"padding:0;Margin:0;padding-right:10px;padding-left:10px\"><h3 class=\"es-m-txt-c\" style=\"Margin:0;font-family:helvetica, 'helvetica neue', arial, verdana, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:20px;font-style:normal;font-weight:bold;line-height:24px;color:#333333\">%s</h3><p class=\"es-m-txt-c\" style=\"Margin:0;mso-line-height-rule:exactly;font-family:helvetica, 'helvetica neue', arial, verdana, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px\"><br></p></td>" +
