@@ -178,9 +178,23 @@ public class EmailService {
             return "";
         }
         
-        StringBuilder html = new StringBuilder();
         int count = Math.min(maxCount, recommendations.size());
         
+        // Создаем общую таблицу с колонками
+        StringBuilder html = new StringBuilder();
+        html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
+        
+        // Добавляем колонки для MSO
+        for (int i = 0; i < count; i++) {
+            html.append("<td style=\"width:").append(560 / count).append("px\" valign=\"top\">");
+        }
+        html.append("</tr></table><![endif]-->");
+        
+        // Основная таблица
+        html.append("<table width=\"560\" cellpadding=\"0\" cellspacing=\"0\" align=\"center\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px\">");
+        html.append("<tr>");
+        
+        // Генерируем карточки
         for (int i = 0; i < count; i++) {
             Supplement supplement = recommendations.get(i);
             html.append(buildSupplementCardHtml(supplement));
@@ -189,6 +203,9 @@ public class EmailService {
                 html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
             }
         }
+        
+        html.append("</tr>");
+        html.append("</table>");
         
         return html.toString();
     }
@@ -204,9 +221,6 @@ public class EmailService {
         String description = truncateDescription(fullDescription, 80); // Ограничиваем до 80 символов
         
         return String.format(
-            "<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr><td style=\"width:174px\" valign=\"top\"><![endif]-->" +
-            "<table width=\"174\" cellpadding=\"0\" cellspacing=\"0\" align=\"left\" class=\"es-left\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:left\">" +
-            "<tr>" +
             "<td align=\"center\" class=\"es-m-p0r es-m-p20b\" style=\"padding:0;Margin:0;width:174px\">" +
             "<table width=\"174\" cellpadding=\"0\" cellspacing=\"0\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">" +
             "<tr>" +
@@ -221,9 +235,7 @@ public class EmailService {
             "<tr>" +
             "<td align=\"center\" style=\"padding:0;Margin:0;padding-bottom:20px;padding-right:5px;padding-left:5px\"><span class=\"es-button-border\" style=\"border-style:solid;border-color:#5c68e2;background:#55685b;border-width:0;display:inline-block;border-radius:8px;width:auto\"><a href=\"%s\" target=\"_blank\" class=\"es-button es-button-1621628636490\" style=\"mso-style-priority:100 !important;text-decoration:none !important;mso-line-height-rule:exactly;color:#ffffff;font-size:20px;padding:5px 30px;display:inline-block;background:#55685b;border-radius:8px;font-family:arial, 'helvetica neue', helvetica, sans-serif;font-weight:normal;font-style:normal;line-height:24px;width:auto;text-align:center;letter-spacing:0;mso-padding-alt:0;mso-border-alt:10px solid #55685b\">купить</a></span></td>" +
             "</tr>" +
-            "</table></td>" +
-            "</tr>" +
-            "</table><!--[if mso]></td></tr></table><![endif]-->",
+            "</table></td>",
             imageUrl, name, description, productUrl
         );
     }
