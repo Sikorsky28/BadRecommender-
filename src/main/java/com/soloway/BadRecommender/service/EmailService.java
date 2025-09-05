@@ -181,28 +181,20 @@ public class EmailService {
         int count = Math.min(maxCount, recommendations.size());
         StringBuilder html = new StringBuilder();
         
-        // Создаем единую таблицу с ячейками для карточек
-        html.append("<!--[if mso]><table style=\"width:560px\" cellpadding=\"0\" cellspacing=\"0\"><tr>");
+        // Начало блока с товарами
+        html.append("<!-- Начало блока с товарами -->");
+        html.append("<table align=\"center\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" style=\"width:100%;max-width:600px;Margin:0 auto;\">");
+        html.append("<tr>");
         
-        // Добавляем MSO ячейки
-        for (int i = 0; i < count; i++) {
-            int width = count == 3 ? (i == 0 ? 194 : 173) : 270;
-            html.append("<td style=\"width:").append(width).append("px\" valign=\"top\">");
-        }
-        html.append("</tr></table><![endif]-->");
-        
-        // Генерируем карточки как ячейки единой таблицы
+        // Генерируем ячейки для каждого товара
         for (int i = 0; i < count; i++) {
             Supplement supplement = recommendations.get(i);
             html.append(buildSupplementCardHtml(supplement, i, count));
-            
-            // Добавляем разделитель между карточками (кроме последней)
-            if (i < count - 1) {
-                html.append("<td class=\"es-hidden\" style=\"padding:0;Margin:0;width:20px\"></td>");
-            }
         }
         
-        html.append("<!--[if mso]></td></tr></table><![endif]-->");
+        html.append("</tr>");
+        html.append("</table>");
+        html.append("<!-- Конец блока -->");
         
         return html.toString();
     }
@@ -217,52 +209,48 @@ public class EmailService {
         String fullDescription = supplement.getDescription() != null ? supplement.getDescription() : "Описание отсутствует";
         String description = truncateDescription(fullDescription, 80); // Ограничиваем до 80 символов
         
-        // Определяем ширину карточки в зависимости от количества
-        int cardWidth = totalCount == 3 ? 174 : 270;
-        int imageWidth = totalCount == 3 ? 164 : 164;
-        String alignClass = index == 0 ? "es-left" : (index == totalCount - 1 ? "es-right" : "es-left");
+        // Определяем ширину ячейки в зависимости от количества товаров
+        String cellWidth = totalCount == 3 ? "33.3%" : "50%";
         
         StringBuilder html = new StringBuilder();
         
-        // Основная таблица карточки
-        html.append("<table cellpadding=\"0\" cellspacing=\"0\" align=\"").append(index == totalCount - 1 ? "right" : "left").append("\" class=\"").append(alignClass).append("\" role=\"none\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:collapse;border-spacing:0px;float:").append(index == totalCount - 1 ? "right" : "left").append("\">");
-        html.append("<tr>");
-        html.append("<td align=\"center\" class=\"").append(index == 0 ? "es-m-p0r es-m-p20b" : "es-m-p20b").append("\" style=\"padding:0;Margin:0;width:").append(cardWidth).append("px\">");
-        html.append("<table cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"mso-table-lspace:0pt;mso-table-rspace:0pt;border-collapse:separate;border-spacing:0px;border-left:1px solid #efefef;border-right:1px solid #efefef;border-top:1px solid #efefef;border-bottom:1px solid #efefef;border-radius:5px\" role=\"presentation\">");
+        // Ячейка товара
+        html.append("<!-- Товар ").append(index + 1).append(" -->");
+        html.append("<td align=\"center\" valign=\"top\" class=\"stack-column\" style=\"width:").append(cellWidth).append(";padding:10px;\">");
+        html.append("<table border=\"0\" cellpadding=\"0\" cellspacing=\"0\" role=\"presentation\" width=\"100%\">");
         
         // Изображение
         html.append("<tr>");
-        html.append("<td align=\"center\" style=\"padding:5px;Margin:0;font-size:0px\"><img src=\"").append(imageUrl).append("\" alt=\"\" width=\"").append(imageWidth).append("\" class=\"adapt-img\" style=\"display:block;font-size:14px;border:0;outline:none;text-decoration:none;margin:0\"></td>");
+        html.append("<td align=\"center\">");
+        html.append("<img src=\"").append(imageUrl).append("\" alt=\"").append(name).append("\" width=\"150\" style=\"display:block;Margin:0 auto;\">");
+        html.append("</td>");
         html.append("</tr>");
         
         // Название
         html.append("<tr>");
-        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-right:10px;padding-left:10px\"><h3 class=\"es-m-txt-c\" style=\"Margin:0;font-family:arial, 'helvetica neue', helvetica, sans-serif;mso-line-height-rule:exactly;letter-spacing:0;font-size:20px;font-style:normal;font-weight:bold;line-height:24px;color:#333333\">").append(name).append("</h3>");
-        if (totalCount == 2) {
-            html.append("</td>");
-        } else {
-            html.append("<p class=\"es-m-txt-c\" style=\"Margin:0;mso-line-height-rule:exactly;font-family:arial, 'helvetica neue', helvetica, sans-serif;line-height:21px;letter-spacing:0;color:#333333;font-size:14px\"><br></p></td>");
-        }
+        html.append("<td align=\"center\" style=\"font-family:Arial, sans-serif;font-size:14px;color:#333333;padding:5px 0;\">");
+        html.append("<strong>").append(name).append("</strong>");
+        html.append("</td>");
         html.append("</tr>");
         
         // Описание
         html.append("<tr>");
-        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-top:5px;padding-right:10px;padding-left:10px\">");
-        if (totalCount == 2) {
-            html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\"><br></p>");
-        }
-        html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\">").append(description).append("</p>");
-        html.append("<p style=\"Margin:0;mso-line-height-rule:exactly;font-family:merriweather, georgia, 'times new roman', serif;line-height:14.4px;letter-spacing:0;color:#333333;font-size:12px\"><br></p></td>");
+        html.append("<td align=\"center\" style=\"font-family:Arial, sans-serif;font-size:12px;color:#666666;padding:0 5px;\">");
+        html.append(description);
+        html.append("</td>");
         html.append("</tr>");
         
         // Кнопка
         html.append("<tr>");
-        html.append("<td align=\"center\" style=\"padding:0;Margin:0;padding-bottom:20px;padding-right:5px;padding-left:5px\"><span class=\"es-button-border\" style=\"border-style:solid;border-color:#5c68e2;background:#55685b;border-width:0;display:inline-block;border-radius:8px;width:auto\"><a href=\"").append(productUrl).append("\" target=\"_blank\" class=\"es-button es-button-1621628636490\" style=\"mso-style-priority:100 !important;text-decoration:none !important;mso-line-height-rule:exactly;color:#ffffff;font-size:20px;padding:5px 30px;display:inline-block;background:#55685b;border-radius:8px;font-family:arial, 'helvetica neue', helvetica, sans-serif;font-weight:normal;font-style:normal;line-height:24px;width:auto;text-align:center;letter-spacing:0;mso-padding-alt:0;mso-border-alt:10px solid #55685b\">купить</a></span></td>");
+        html.append("<td align=\"center\" style=\"padding:10px 0;\">");
+        html.append("<a href=\"").append(productUrl).append("\" target=\"_blank\" style=\"background:#2CB543;color:#ffffff;font-family:Arial,sans-serif;font-size:13px;text-decoration:none;padding:8px 16px;display:inline-block;border-radius:3px;\">");
+        html.append("Купить");
+        html.append("</a>");
+        html.append("</td>");
         html.append("</tr>");
         
-        html.append("</table></td>");
-        html.append("</tr>");
         html.append("</table>");
+        html.append("</td>");
         
         return html.toString();
     }
