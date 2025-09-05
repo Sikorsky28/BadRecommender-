@@ -16,6 +16,7 @@ public class Supplement {
     private String productUrl;
     private String imageUrl;
     private String price;
+    private String type; // "основные" или "дополнительные"
 
     public Supplement(Long id, String code, String name, Category category, Set<String> tags, boolean active) {
         this.id = id;
@@ -48,6 +49,7 @@ public class Supplement {
     public String getProductUrl() { return productUrl; }
     public String getImageUrl() { return imageUrl; }
     public String getPrice() { return price; }
+    public String getType() { return type; }
 
     public void setId(Long id) { this.id = id; }
     public void setCode(String code) { this.code = code; }
@@ -61,4 +63,5 @@ public class Supplement {
     public void setProductUrl(String productUrl) { this.productUrl = productUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public void setPrice(String price) { this.price = price; }
+    public void setType(String type) { this.type = type; }
 }

@@ -2,6 +2,7 @@ package com.soloway.BadRecommender.service;
 
 import com.soloway.BadRecommender.model.Question;
 import com.soloway.BadRecommender.model.UserAnswer;
+import com.soloway.BadRecommender.model.Supplement;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class RecommendationService {
 
     private final GoogleSheetsDataService googleSheetsDataService;
+    private final GoogleSheetsService googleSheetsService;
     private final ScoreCalculationService scoreCalculationService;
     
     // Маппинг между кодами тем и их названиями в Google Sheets
@@ -53,8 +55,10 @@ public class RecommendationService {
 
     @Autowired
     public RecommendationService(GoogleSheetsDataService googleSheetsDataService,
+                                GoogleSheetsService googleSheetsService,
                                 ScoreCalculationService scoreCalculationService) {
         this.googleSheetsDataService = googleSheetsDataService;
+        this.googleSheetsService = googleSheetsService;
         this.scoreCalculationService = scoreCalculationService;
     }
 
@@ -141,6 +145,54 @@ public class RecommendationService {
         question.setEffects(null);
         
         return question;
-  }
+    }
+
+    /**
+     * Получает основные рекомендации для темы
+     */
+    public List<Supplement> getMainRecommendations(String topicCode) {
+        try {
+            // Получаем русское название темы
+            final String topicName = TOPIC_MAPPING.getOrDefault(topicCode, topicCode);
+            
+            // Загружаем все добавки
+            List<Supplement> allSupplements = googleSheetsService.loadSupplements();
+            
+            // Фильтруем добавки по теме и типу "основные"
+            return allSupplements.stream()
+                .filter(supplement -> supplement.getCategory() != null && topicName.equals(supplement.getCategory().getName()))
+                .filter(supplement -> "основные".equalsIgnoreCase(supplement.getType()))
+                .limit(3) // Максимум 3 основные рекомендации
+                .collect(Collectors.toList());
+                
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка получения основных рекомендаций: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Получает дополнительные рекомендации для темы
+     */
+    public List<Supplement> getAdditionalRecommendations(String topicCode) {
+        try {
+            // Получаем русское название темы
+            final String topicName = TOPIC_MAPPING.getOrDefault(topicCode, topicCode);
+            
+            // Загружаем все добавки
+            List<Supplement> allSupplements = googleSheetsService.loadSupplements();
+            
+            // Фильтруем добавки по теме и типу "дополнительные"
+            return allSupplements.stream()
+                .filter(supplement -> supplement.getCategory() != null && topicName.equals(supplement.getCategory().getName()))
+                .filter(supplement -> "дополнительные".equalsIgnoreCase(supplement.getType()))
+                .limit(2) // Максимум 2 дополнительные рекомендации
+                .collect(Collectors.toList());
+                
+        } catch (Exception e) {
+            System.err.println("❌ Ошибка получения дополнительных рекомендаций: " + e.getMessage());
+            return new ArrayList<>();
+        }
+    }
 }
 
