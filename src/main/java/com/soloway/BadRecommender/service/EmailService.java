@@ -243,7 +243,7 @@ public class EmailService {
         // Кнопка
         html.append("<tr>");
         html.append("<td align=\"center\" style=\"padding:10px 0;\">");
-        html.append("<a href=\"").append(productUrl).append("\" target=\"_blank\" style=\"background:#2CB543;color:#ffffff;font-family:Arial,sans-serif;font-size:13px;text-decoration:none;padding:8px 16px;display:inline-block;border-radius:3px;\">");
+        html.append("<a href=\"").append(productUrl).append("\" target=\"_blank\" style=\"background:#55685b;color:#ffffff;font-family:Arial,sans-serif;font-size:13px;text-decoration:none;padding:8px 16px;display:inline-block;border-radius:3px;\">");
         html.append("Купить");
         html.append("</a>");
         html.append("</td>");
